@@ -6,135 +6,73 @@
 <title>channel_01</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-
-  html, body {
-    width:100%; height:100%;
-    background:#000;
-    overflow:hidden;
-    font-family:"Courier New", Courier, monospace;
+  html, body { width:100%; height:100%; background:#000; overflow:hidden; font-family:"Courier New",Courier,monospace; }
+  #threeCanvas { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:0; }
+  #bloomCanvas {
+    position:fixed; top:0; left:0; width:100vw; height:100vh;
+    z-index:1; pointer-events:none;
+    mix-blend-mode: screen;
   }
-
-  /* full screen canvas stack */
-  #canvas-wrap {
-    position:fixed;
-    top:0; left:0;
-    width:100vw; height:100vh;
-    z-index:0;
+  #tearCanvas { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:2; pointer-events:none; }
+  #glitchOverlay {
+    position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:3; pointer-events:none;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
   }
-  #bgCanvas, #fgCanvas {
-    position:absolute;
-    top:0; left:0;
-    width:100%; height:100%;
-  }
-
-  /* bottom overlay UI */
   #ui {
-    position:fixed;
-    bottom:0; left:0; right:0;
-    z-index:10;
-    padding:10px 14px 20px;
-    background:linear-gradient(transparent, rgba(0,0,0,0.85) 40%);
+    position:fixed; bottom:0; left:0; right:0; z-index:10;
+    padding:10px 14px 22px;
+    background:linear-gradient(transparent, rgba(0,0,0,0.88) 45%);
   }
-
-  .input-row {
-    display:flex;
-    gap:6px;
-    align-items:center;
-    margin-bottom:5px;
-  }
-
+  .input-row { display:flex; gap:6px; align-items:center; margin-bottom:5px; }
   .prompt { color:#ffff00; font-size:13px; white-space:nowrap; }
-
   input[type=text] {
-    flex:1;
-    background:transparent;
-    border:none;
-    border-bottom:1px solid #ffff00;
-    outline:none;
-    color:#ffff00;
-    font-family:"Courier New",monospace;
-    font-size:14px;
-    padding:3px 4px;
-    caret-color:#ffff00;
+    flex:1; background:transparent; border:none; border-bottom:1px solid #ffff00;
+    outline:none; color:#ffff00; font-family:"Courier New",monospace;
+    font-size:14px; padding:3px 4px; caret-color:#ffff00;
   }
   input::placeholder { color:#555500; }
-
   button#submitBtn {
-    background:transparent;
-    border:1px solid #ffff00;
-    color:#ffff00;
-    font-family:"Courier New",monospace;
-    font-size:13px;
-    padding:3px 10px;
-    cursor:pointer;
-    white-space:nowrap;
+    background:transparent; border:1px solid #ffff00; color:#ffff00;
+    font-family:"Courier New",monospace; font-size:13px; padding:3px 10px; cursor:pointer;
   }
   button#submitBtn:active { background:#ffff00; color:#000; }
-
-  .meta {
-    display:flex;
-    justify-content:space-between;
-    font-size:10px;
-    color:#555500;
-  }
-  .meta .latest-word { color:#ffff00; }
-
-  /* top corner dev panel — hidden by default */
+  .meta { display:flex; justify-content:space-between; font-size:10px; color:#555500; }
+  .meta .lw { color:#ffff00; }
   #dev {
-    position:fixed;
-    top:0; left:0;
-    z-index:20;
-    padding:6px 8px;
-    display:flex;
-    gap:6px;
-    opacity:0.15;
-    transition:opacity 0.2s;
+    position:fixed; top:0; left:0; z-index:20; padding:6px 8px; display:flex; gap:6px;
+    opacity:0.12; transition:opacity 0.2s;
   }
   #dev:hover { opacity:1; }
   #dev button {
-    background:transparent;
-    border:1px solid #ffff00;
-    color:#ffff00;
-    font-family:"Courier New",monospace;
-    font-size:9px;
-    padding:2px 6px;
-    cursor:pointer;
+    background:transparent; border:1px solid #ffff00; color:#ffff00;
+    font-family:"Courier New",monospace; font-size:9px; padding:2px 6px; cursor:pointer;
   }
   #dev button:active { background:#ffff00; color:#000; }
-
-  /* feedback flash */
   #feedback {
-    position:fixed;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    color:#ffff00;
-    font-size:11px;
-    font-family:"Courier New",monospace;
-    pointer-events:none;
-    opacity:0;
-    transition:opacity 0.1s;
-    z-index:15;
-    text-align:center;
-    white-space:nowrap;
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    color:#ffff00; font-size:13px; font-family:"Courier New",monospace;
+    pointer-events:none; opacity:0; transition:opacity 0.08s; z-index:15;
+    text-align:center; white-space:nowrap; text-shadow: 0 0 20px #ffff00, 0 0 40px #ffff00;
   }
   #feedback.show { opacity:1; }
+  #whiteFlash {
+    position:fixed; inset:0; z-index:9; pointer-events:none;
+    background:#fff; opacity:0; transition:opacity 0.05s;
+  }
 </style>
 </head>
 <body>
-
-<div id="canvas-wrap">
-  <canvas id="bgCanvas"></canvas>
-  <canvas id="fgCanvas"></canvas>
-</div>
-
+<canvas id="threeCanvas"></canvas>
+<canvas id="bloomCanvas"></canvas>
+<canvas id="tearCanvas"></canvas>
+<div id="glitchOverlay"></div>
+<div id="whiteFlash"></div>
 <div id="feedback"></div>
-
 <div id="dev">
   <button id="resetBtn">reset</button>
   <button id="addTenBtn">+10</button>
+  <button id="destroyBtn">destroy</button>
 </div>
-
 <div id="ui">
   <div class="input-row">
     <span class="prompt">&gt;</span>
@@ -142,22 +80,23 @@
     <button id="submitBtn">ok</button>
   </div>
   <div class="meta">
-    <span>ch_01 &nbsp;·&nbsp; words: <span id="wordCount">0</span> &nbsp;·&nbsp; density: <span id="densityPct">0%</span></span>
-    <span id="latestWord" class="latest-word">&nbsp;</span>
+    <span>ch_01 · words: <span id="wordCount">0</span> · density: <span id="densityPct">0%</span></span>
+    <span id="latestWord" class="lw">&nbsp;</span>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // ============================================================
-// UTILS + NEONS
+// UTILS
 // ============================================================
-const NEONS = [
+const NEONS=[
   [255,0,255],[0,255,255],[255,255,0],[0,255,0],
   [255,0,100],[0,100,255],[255,80,0],[180,0,255],
   [0,255,150],[255,0,0],[255,200,0],[100,0,255],
   [0,255,80],[255,50,200],[0,200,255]
 ];
-function randNeon(){ return NEONS[Math.floor(Math.random()*NEONS.length)]; }
+function randNeon(){return NEONS[Math.floor(Math.random()*NEONS.length)];}
 function hashWord(w){
   let h=2166136261;
   for(let i=0;i<w.length;i++){h^=w.charCodeAt(i);h=(h*16777619)>>>0;}
@@ -176,40 +115,54 @@ function valueNoise(x,y){
   const ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy);
   return a*(1-ux)*(1-uy)+b*ux*(1-uy)+c*(1-ux)*uy+d*ux*uy;
 }
-function noise2(x,y){
-  return valueNoise(x,y)*0.5+valueNoise(x*2.1+3.7,y*2.1+1.3)*0.3+valueNoise(x*4.3+7.1,y*4.3+5.9)*0.2;
-}
-
-// ============================================================
-// PARAMS
-// ============================================================
-function seedParams(word){
-  const h=hashWord(String(word));
-  const rng=seededRNG(h);
-  return{
-    blobCount:  Math.floor(rng()*5+3),
-    blobSeed:   h,
-    blobPal:    [Math.floor(rng()*NEONS.length),Math.floor(rng()*NEONS.length),Math.floor(rng()*NEONS.length)],
-    blobSize:   rng()*0.55+0.25,
-    blobWarp:   rng()*1.2+0.3,
-    bleedAmt:   rng()*0.55+0.25,
-    shiftAmt:   rng()*40+8,
-    noiseFreq:  rng()*0.003+0.0008,
-    noiseAmp:   rng()*90+30,
-    scanlines:  Math.floor(rng()*10+2),
-    tearCount:  Math.floor(rng()*3+1),
-    word, hash:h
-  };
+function noise3(x,y,z){
+  return valueNoise(x+z*0.3,y)*0.5
+       + valueNoise(x*2.1+3.7,y*2.1+z*0.6+1.3)*0.3
+       + valueNoise(x*4.3+7.1,y*4.3+z*1.2+5.9)*0.2;
 }
 
 // ============================================================
 // STATE
 // ============================================================
-let wordBank = JSON.parse(localStorage.getItem('wb_ch01')||'[]');
-let density  = parseFloat(localStorage.getItem('dn_ch01')||'0');
-let params   = seedParams(wordBank.length>0?wordBank[wordBank.length-1]:'init');
-let submitFlash=0, fragments=[], cascades=[], frameT=0;
-let bleedBuf=null;
+function seedParams(word){
+  const h=hashWord(String(word));
+  const rng=seededRNG(h);
+  const sp=rng(); // spikiness 0-1
+  // void color — tinted from word hash
+  const voidHue=rng();
+  const voidR=voidHue<0.33?Math.floor(rng()*25+5):Math.floor(rng()*8);
+  const voidG=voidHue>0.33&&voidHue<0.66?Math.floor(rng()*20+3):Math.floor(rng()*5);
+  const voidB=voidHue>0.66?Math.floor(rng()*30+8):Math.floor(rng()*15+5);
+  return{
+    formCount:   Math.floor(rng()*3+2),
+    spikiness:   sp,
+    noiseFreq:   sp>0.7 ? rng()*4+2 : rng()*1.5+0.4,   // high spike = high freq
+    noiseAmp:    sp>0.7 ? rng()*1.8+0.8 : rng()*0.6+0.2, // high spike = high amp
+    lightCol1:   [Math.floor(rng()*NEONS.length),Math.floor(rng()*NEONS.length)],
+    lightIntens: rng()*3+1.5,
+    rotSpeed:    rng()*0.004+0.001,
+    tearCount:   Math.floor(rng()*3+1),
+    shiftAmt:    rng()*40+8,
+    scanlines:   Math.floor(rng()*8+3),
+    bloomIntens: rng()*0.3+0.25,
+    baseType:    Math.floor(rng()*5),
+    voidColor:   [voidR,voidG,voidB],
+    word, hash:h
+  };
+}
+
+let wordBank=JSON.parse(localStorage.getItem('wb_ch01')||'[]');
+let density=parseFloat(localStorage.getItem('dn_ch01')||'0');
+let params=seedParams(wordBank.length>0?wordBank[wordBank.length-1]:'init');
+let submitFlash=0, frameT=0;
+let destructionMode=false, destructionTimer=0;
+let submissionsSinceDestruction=0;
+const DESTRUCTION_INTERVAL=20;
+
+// morphing state
+let morphing=false, morphT=0, morphDuration=45;
+let prevPositions=[], targetPositions=[];
+let prevScales=[], targetScales=[];
 
 function persist(){
   localStorage.setItem('wb_ch01',JSON.stringify(wordBank));
@@ -217,296 +170,467 @@ function persist(){
 }
 
 // ============================================================
-// CANVAS SETUP — fills viewport, reacts to resize
+// THREE.JS
 // ============================================================
-const bgCanvas=document.getElementById('bgCanvas');
-const fgCanvas=document.getElementById('fgCanvas');
-const bg=bgCanvas.getContext('2d');
-const fg=fgCanvas.getContext('2d');
-let W,H;
+const renderer=new THREE.WebGLRenderer({
+  canvas:document.getElementById('threeCanvas'),
+  antialias:false, alpha:false, preserveDrawingBuffer:true
+});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setClearColor(0x000000,1);
+renderer.toneMapping=THREE.ReinhardToneMapping;
+renderer.toneMappingExposure=2.5;
 
-function resize(){
-  W=window.innerWidth;
-  H=window.innerHeight;
-  bgCanvas.width=W; bgCanvas.height=H;
-  fgCanvas.width=W; fgCanvas.height=H;
-  bleedBuf=null; // reset bleed buffer on resize
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x000005,0.028);
+
+const camera=new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,0.1,100);
+camera.position.set(0,0,5.5);
+
+window.addEventListener('resize',()=>{
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  bloomCanvas.width=window.innerWidth; bloomCanvas.height=window.innerHeight;
+  tearCanvas.width=window.innerWidth;  tearCanvas.height=window.innerHeight;
+});
+
+// ============================================================
+// SHADER MATERIAL — scanlines glitch at edges, fade on bright
+// ============================================================
+function makeMat(col,col2,spikiness,opacity,wireframe){
+  const c1=new THREE.Color(col[0]/255*0.18,col[1]/255*0.18,col[2]/255*0.18);
+  const e1=new THREE.Color(col2[0]/255*0.55,col2[1]/255*0.55,col2[2]/255*0.55);
+  return new THREE.ShaderMaterial({
+    uniforms:{
+      uColor:    {value:c1},
+      uEmissive: {value:e1},
+      uEmitInt:  {value:0.7+density*0.9},
+      uScanFreq: {value:60+spikiness*160},
+      uTime:     {value:0},
+      uOpacity:  {value:opacity},
+      uSpiky:    {value:spikiness},
+    },
+    vertexShader:`
+      varying vec3 vNormal;
+      varying vec4 vClipPos;
+      varying float vDepth;
+      void main(){
+        vNormal=normalize(normalMatrix*normal);
+        gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+        vClipPos=gl_Position;
+        vDepth=gl_Position.z/gl_Position.w;
+      }
+    `,
+    fragmentShader:`
+      uniform vec3 uColor;
+      uniform vec3 uEmissive;
+      uniform float uEmitInt;
+      uniform float uScanFreq;
+      uniform float uTime;
+      uniform float uOpacity;
+      uniform float uSpiky;
+      varying vec3 vNormal;
+      varying vec4 vClipPos;
+      varying float vDepth;
+
+      void main(){
+        vec2 sc=vClipPos.xy/vClipPos.w;
+
+        // edge detection — how much are we grazing the surface
+        float edge=1.0-abs(dot(vNormal,vec3(0,0,1)));
+        float edgeFactor=pow(edge,1.5);
+
+        // scanlines — break and glitch at edges
+        float scanRaw=sin(sc.y*uScanFreq+uTime*0.4);
+        // break scanlines at edges — add noise offset
+        float glitchOffset=edgeFactor*sin(sc.y*uScanFreq*3.1+uTime*2.0)*0.3;
+        float scan=sin(sc.y*uScanFreq+uTime*0.4+glitchOffset*3.0);
+        float scanLine=smoothstep(0.1,0.9,scan);
+        float dark=1.0-scanLine*(0.22+uSpiky*0.15);
+
+        // diffuse
+        vec3 ld=normalize(vec3(0.4,0.8,1.2));
+        float diff=max(dot(vNormal,ld),0.0)*0.7+0.3;
+
+        // bright faces — scanlines fade out
+        float brightness=diff;
+        float scanFade=1.0-smoothstep(0.6,1.0,brightness)*0.7;
+        dark=mix(1.0,dark,scanFade);
+
+        vec3 col=uColor*diff*dark+uEmissive*uEmitInt*dark;
+
+        // chromatic edge aberration
+        col.r+=edgeFactor*0.12*sin(sc.y*uScanFreq*0.95+uTime);
+        col.b+=edgeFactor*0.10*sin(sc.y*uScanFreq*1.05-uTime);
+
+        // depth fog softening (dof hint)
+        float fogFactor=smoothstep(0.3,1.0,vDepth*0.5+0.5);
+        col=mix(col,vec3(0.0),fogFactor*0.5);
+
+        gl_FragColor=vec4(col,uOpacity*(1.0-fogFactor*0.4));
+      }
+    `,
+    transparent:true,
+    side:THREE.DoubleSide,
+    wireframe:wireframe||false,
+  });
 }
-window.addEventListener('resize',resize);
-resize();
 
 // ============================================================
-// BACKGROUND
+// GEOMETRY
 // ============================================================
-function drawBackground(){
-  if(bleedBuf){
-    const bleed=Math.min(0.94,params.bleedAmt+density*0.18+(submitFlash>0?0.04:0));
-    bg.globalAlpha=bleed;
-    bg.drawImage(bleedBuf,0,0,W,H);
-    bg.globalAlpha=1;
+function buildGeo(baseType,segments,noiseFreq,noiseAmp,spikiness,seed,destructMult){
+  let geo;
+  const dm=destructMult||1;
+  switch(baseType){
+    case 0: geo=new THREE.SphereGeometry(1,segments,segments); break;
+    case 1: geo=new THREE.IcosahedronGeometry(1,Math.max(1,Math.floor(segments/5))); break;
+    case 2: geo=new THREE.BoxGeometry(1,1,1,Math.floor(segments/3),Math.floor(segments/3),Math.floor(segments/3)); break;
+    case 3: geo=new THREE.TorusGeometry(0.7,0.4,Math.floor(segments/2),segments); break;
+    case 4: geo=new THREE.ConeGeometry(0.8,1.8,segments,Math.floor(segments/2)); break;
+    default: geo=new THREE.SphereGeometry(1,segments,segments);
   }
-  // void wash
-  bg.globalAlpha=0.10+(submitFlash>0?0.28:0);
-  bg.fillStyle='#000';
-  bg.fillRect(0,0,W,H);
-  bg.globalAlpha=1;
-
-  // organic blobs
-  for(let b=0;b<params.blobCount;b++){
-    const palIdx=params.blobPal[b%3];
-    const rgb=NEONS[palIdx];
-    const cx=W*0.5+noise2(b*8.3+frameT*params.noiseFreq,b*2.1)*params.noiseAmp*2.5-params.noiseAmp*1.25;
-    const cy=H*0.5+noise2(b*3.7,b*6.1+frameT*params.noiseFreq+10)*params.noiseAmp*2.5-params.noiseAmp*1.25;
-    const baseR=params.blobSize*Math.min(W,H)*0.45+b*20;
-    const pulsR=baseR*(0.7+noise2(b*2,frameT*0.001)*0.6);
-    const alpha=0.10+density*0.10;
-
-    bg.beginPath();
-    const steps=64;
-    for(let i=0;i<=steps;i++){
-      const angle=(i/steps)*Math.PI*2;
-      const nx=Math.cos(angle)*params.blobWarp+b*15;
-      const ny=Math.sin(angle)*params.blobWarp+b*15+frameT*0.0005;
-      const n=noise2(nx*1.4,ny*1.4)+noise2(nx*3.1+20,ny*3.1+20)*0.35+noise2(nx*7+50,ny*7+50)*0.12;
-      const rad=pulsR*(0.35+n*0.85);
-      const px=cx+Math.cos(angle)*rad;
-      const py=cy+Math.sin(angle)*rad;
-      i===0?bg.moveTo(px,py):bg.lineTo(px,py);
-    }
-    bg.closePath();
-    const grd=bg.createRadialGradient(cx,cy,pulsR*0.1,cx,cy,pulsR*1.1);
-    grd.addColorStop(0,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha*1.6})`);
-    grd.addColorStop(0.5,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`);
-    grd.addColorStop(1,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
-    bg.fillStyle=grd;
-    bg.fill();
-    bg.strokeStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha*0.5})`;
-    bg.lineWidth=2;
-    bg.stroke();
+  const pos=geo.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
+    const n1=noise3(x*noiseFreq,y*noiseFreq,z*noiseFreq);
+    const n2=noise3(x*noiseFreq*2.5+10,y*noiseFreq*2.5+10,z*noiseFreq*2.5)*0.4;
+    const n3=noise3(x*noiseFreq*6+30,y*noiseFreq*6+30,z*noiseFreq*6)*0.15;
+    const rawN=n1+n2+n3;
+    // spikiness varies wildly — sharp exponent for high values
+    const spiked=spikiness>0.6
+      ? Math.pow(Math.abs(rawN),0.3+spikiness*0.5)*Math.sign(rawN)*1.4
+      : rawN;
+    const disp=1+spiked*noiseAmp*dm;
+    pos.setXYZ(i,x*disp,y*disp,z*disp);
   }
+  geo.computeVertexNormals();
+  return geo;
+}
 
-  // pixel sort strips
-  const strips=Math.floor(params.shiftAmt*0.5+density*15+(submitFlash>0?30:0));
+// ============================================================
+// FORMS
+// ============================================================
+const forms=[];
+const formGroup=new THREE.Group();
+scene.add(formGroup);
+let activeLights=[];
+
+function spawnForm(p,idx,isDestruction){
+  const rng=seededRNG(p.hash+idx*9999+(isDestruction?777777:0));
+  const sp=isDestruction?rng():p.spikiness;
+  const segments=isDestruction?Math.floor(rng()*8+3):Math.floor(rng()*14+8);
+  const dm=isDestruction?rng()*4+1:1;
+  const geo=buildGeo(
+    isDestruction?Math.floor(rng()*5):p.baseType,
+    segments,
+    p.noiseFreq*(isDestruction?rng()*3+0.5:1),
+    p.noiseAmp*(isDestruction?rng()*3+0.5:1),
+    sp, p.hash+idx, dm
+  );
+  const colIdx=p.lightCol1[idx%2];
+  const col2Idx=(colIdx+Math.floor(rng()*7)+1)%NEONS.length;
+  const col=NEONS[colIdx], col2=NEONS[col2Idx];
+  const wireframe=isDestruction?rng()<0.45:sp>0.78&&rng()<0.4;
+  const mat=makeMat(col,col2,isDestruction?rng():sp,isDestruction?0.55+rng()*0.45:0.82+rng()*0.18,wireframe);
+
+  const mesh=new THREE.Mesh(geo,mat);
+  const spread=isDestruction?3.5+rng()*2.5:Math.max(0.3,1.8-density*0.9);
+  mesh.position.set((rng()-0.5)*spread*2.5,(rng()-0.5)*spread*2,(rng()-0.5)*spread*1.8);
+  const scale=isDestruction?rng()*2.2+0.2:rng()*0.85+0.45;
+  mesh.scale.setScalar(scale);
+  mesh.userData={
+    rotAxis:new THREE.Vector3(rng()-0.5,rng()-0.5,rng()-0.5).normalize(),
+    rotSpeed:(rng()*0.01+0.001)*(1+density*2)*(isDestruction?rng()*6+2:1),
+    phase:rng()*1000, wobble:rng()*0.012+0.002,
+    baseScale:scale, isDestruction,
+    spazVx:isDestruction?(rng()-0.5)*0.12:0,
+    spazVy:isDestruction?(rng()-0.5)*0.12:0,
+    spazVz:isDestruction?(rng()-0.5)*0.06:0,
+    morphSeed:rng()*1000,
+    col,col2,sp,segments,
+  };
+  return mesh;
+}
+
+function buildLights(p,isDestruction){
+  scene.children.filter(c=>c.isLight).forEach(l=>scene.remove(l));
+  const c1=NEONS[p.lightCol1[0]], c2=NEONS[p.lightCol1[1]];
+  const im=isDestruction?3.5:1;
+  const l1=new THREE.PointLight(new THREE.Color(c1[0]/255,c1[1]/255,c1[2]/255),p.lightIntens*(1+density*1.5)*im,15);
+  l1.position.set(0.3,0.5,1.5); scene.add(l1);
+  const l2=new THREE.PointLight(new THREE.Color(c2[0]/255,c2[1]/255,c2[2]/255),p.lightIntens*0.6*(1+density)*im,12);
+  l2.position.set(-1.2,-0.6,-1); scene.add(l2);
+  // WHITE OVEREXPOSED CORE — key to bloom
+  const core=new THREE.PointLight(0xffffff,p.lightIntens*1.8*(isDestruction?3:1),4);
+  core.position.set(0,0,0.2); scene.add(core);
+  // second white core slightly offset
+  const core2=new THREE.PointLight(0xffffff,p.lightIntens*0.9*(isDestruction?2:1),3);
+  core2.position.set(0.3,-0.2,0.8); scene.add(core2);
+  // bruised ambient
+  const vc=p.voidColor;
+  scene.add(new THREE.AmbientLight(new THREE.Color(vc[0]/255,vc[1]/255,vc[2]/255),0.8));
+  return [l1,l2,core,core2];
+}
+
+function rebuildForms(p,isDestruction){
+  while(formGroup.children.length) formGroup.remove(formGroup.children[0]);
+  forms.length=0;
+  const count=isDestruction?Math.floor(Math.random()*14+8):p.formCount+Math.floor(density*4);
+  for(let i=0;i<count;i++){
+    const m=spawnForm(p,i,isDestruction);
+    formGroup.add(m); forms.push(m);
+  }
+  activeLights=buildLights(p,isDestruction);
+  // update fog to void color
+  const vc=p.voidColor;
+  scene.fog.color.setRGB(vc[0]/255*0.5,vc[1]/255*0.5,vc[2]/255*0.5);
+  renderer.setClearColor(new THREE.Color(vc[0]/4096,vc[1]/4096,vc[2]/4096),1);
+}
+
+rebuildForms(params,false);
+
+// ============================================================
+// MORPHING — store positions and lerp toward new targets
+// ============================================================
+function startMorph(newP){
+  // capture current positions/scales
+  prevPositions=forms.map(f=>f.position.clone());
+  prevScales=forms.map(f=>f.scale.x);
+  // build target positions from new params without rebuilding scene yet
+  const rng=seededRNG(newP.hash);
+  const count=forms.length;
+  targetPositions=[];
+  targetScales=[];
+  for(let i=0;i<count;i++){
+    const r=seededRNG(newP.hash+i*9999);
+    const spread=Math.max(0.3,1.8-density*0.9);
+    targetPositions.push(new THREE.Vector3(
+      (r()-0.5)*spread*2.5,(r()-0.5)*spread*2,(r()-0.5)*spread*1.8
+    ));
+    targetScales.push(r()*0.85+0.45);
+  }
+  morphing=true; morphT=0;
+}
+
+// ============================================================
+// BLOOM — multi-pass: blurred copy + radial center glow
+// ============================================================
+const bloomCanvas=document.getElementById('bloomCanvas');
+const bctx=bloomCanvas.getContext('2d');
+bloomCanvas.width=window.innerWidth; bloomCanvas.height=window.innerHeight;
+
+function drawBloom(){
+  const W=bloomCanvas.width, H=bloomCanvas.height;
+  bctx.clearRect(0,0,W,H);
+
+  // pass 1 — wide soft bloom (heavy blur)
+  const offscreen=document.createElement('canvas');
+  offscreen.width=W; offscreen.height=H;
+  const octx=offscreen.getContext('2d');
+  octx.drawImage(renderer.domElement,0,0,W,H);
+
+  // draw blurred copy at low opacity — wide halo
+  bctx.filter='blur(22px)';
+  bctx.globalAlpha=params.bloomIntens*(destructionMode?1.6:0.8);
+  bctx.drawImage(offscreen,0,0);
+
+  // pass 2 — tighter bright core bloom
+  bctx.filter='blur(8px)';
+  bctx.globalAlpha=params.bloomIntens*1.4*(destructionMode?2:1);
+  bctx.drawImage(offscreen,0,0);
+
+  // pass 3 — radial white glow at center — overexposed core
+  bctx.filter='none';
+  const cx=W/2+Math.sin(frameT*0.012)*W*0.05;
+  const cy=H/2+Math.cos(frameT*0.009)*H*0.04;
+  const grd=bctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(W,H)*0.28);
+  const bi=params.bloomIntens*(destructionMode?2.5:1.2)*(1+density*0.5);
+  grd.addColorStop(0,`rgba(255,255,255,${Math.min(0.9,bi*0.7)})`);
+  grd.addColorStop(0.15,`rgba(255,255,255,${Math.min(0.5,bi*0.3)})`);
+  grd.addColorStop(0.4,`rgba(255,255,255,${Math.min(0.15,bi*0.08)})`);
+  grd.addColorStop(1,'rgba(255,255,255,0)');
+  bctx.globalAlpha=1;
+  bctx.fillStyle=grd;
+  bctx.fillRect(0,0,W,H);
+
+  bctx.filter='none';
+  bctx.globalAlpha=1;
+}
+
+// ============================================================
+// TEAR CANVAS
+// ============================================================
+const tearCanvas=document.getElementById('tearCanvas');
+const tctx=tearCanvas.getContext('2d');
+tearCanvas.width=window.innerWidth; tearCanvas.height=window.innerHeight;
+
+function drawTears(){
+  const W=tearCanvas.width, H=tearCanvas.height;
+  tctx.clearRect(0,0,W,H);
+  const strips=Math.floor(density*8+(submitFlash>0?18:0)+params.scanlines*0.5+(destructionMode?25:0));
   for(let i=0;i<strips;i++){
-    const y=Math.random()*H;
-    const h2=Math.random()*6+1;
     const rgb=randNeon();
-    const shift=(Math.random()-0.5)*params.shiftAmt*(1+density*1.5);
-    bg.globalAlpha=Math.random()*0.12+0.03;
-    bg.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    bg.fillRect(shift,y,W,h2);
+    tctx.globalAlpha=Math.random()*(destructionMode?0.18:0.055)+0.015;
+    tctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    tctx.fillRect(0,Math.random()*H,W,Math.random()*3+1);
   }
-  bg.globalAlpha=1;
-
-  // scanlines
-  const slCount=params.scanlines+Math.floor(density*15);
-  for(let i=0;i<slCount;i++){
-    bg.globalAlpha=Math.random()*0.35+0.08;
-    bg.fillStyle='#000';
-    bg.fillRect(0,Math.random()*H,W,Math.random()*2+1);
+  tctx.globalAlpha=1;
+  const tears=params.tearCount+Math.floor(density*4)+(submitFlash>0?3:0)+(destructionMode?18:0);
+  for(let i=0;i<tears;i++){
+    tctx.globalAlpha=0.45+Math.random()*0.3;
+    tctx.fillStyle='#000';
+    tctx.fillRect(0,Math.random()*H,W,Math.random()*(destructionMode?18:5)+1);
   }
-  bg.globalAlpha=1;
-
-  // tears
-  for(let i=0;i<params.tearCount+Math.floor(density*6);i++){
-    bg.globalAlpha=0.65;
-    bg.fillStyle='#000';
-    bg.fillRect(0,Math.random()*H,W,Math.random()*8+2);
-  }
-  bg.globalAlpha=1;
-
-  // submit burst
-  if(submitFlash>14){
-    for(let i=0;i<24;i++){
+  tctx.globalAlpha=1;
+  if(submitFlash>14||destructionMode){
+    const n=destructionMode?30:16;
+    for(let i=0;i<n;i++){
       const rgb=randNeon();
-      bg.globalAlpha=Math.random()*0.7;
-      bg.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-      bg.fillRect(0,Math.random()*H,W,Math.random()*40+3);
+      tctx.globalAlpha=Math.random()*(destructionMode?0.85:0.5);
+      tctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+      tctx.fillRect(0,Math.random()*H,W,Math.random()*(destructionMode?55:32)+3);
     }
-    bg.globalAlpha=1;
+    tctx.globalAlpha=1;
   }
-
-  // save bleed
-  if(!bleedBuf||bleedBuf.width!==W||bleedBuf.height!==H){
-    bleedBuf=document.createElement('canvas');
-    bleedBuf.width=W; bleedBuf.height=H;
-  }
-  bleedBuf.getContext('2d').drawImage(bgCanvas,0,0);
 }
 
 // ============================================================
-// FRAGMENTS
+// ANIMATE
 // ============================================================
-function spawnFragment(word){
-  const h=hashWord((word||'x')+Math.random());
-  const rng=seededRNG(h);
-  const rgb=NEONS[Math.floor(rng()*NEONS.length)];
-  if(rng()<0.28){spawnCascade(rgb);return;}
-  const isFilament=rng()<0.45;
-  fragments.push({
-    x:(rng()-0.5)*W+W/2, y:(rng()-0.5)*H+H/2,
-    z:rng()*400-200,
-    vx:(rng()-0.5)*0.5, vy:(rng()-0.5)*0.4, vz:(rng()-0.5)*0.5,
-    rot:rng()*Math.PI*2, vrot:(rng()-0.5)*0.015,
-    rgb, alpha:rng()*0.7+0.25,
-    r:rng()*Math.min(W,H)*0.09+Math.min(W,H)*0.025,
-    noiseOff:rng()*100, warp:rng()*1.4+0.4,
-    phase:rng()*1000, wobble:rng()*0.025+0.005,
-    corrupt:rng()<0.4+density*0.6,
-    filament:isFilament, filPts:Math.floor(rng()*10+5),
-  });
-}
+function animateForms(){
+  const t=frameT;
 
-function spawnCascade(rgb){
-  cascades.push({
-    rgb:rgb||randNeon(),
-    x:(Math.random()-0.5)*W+W/2, y:-20,
-    vy:4+Math.random()*8,
-    len:Math.random()*H*0.5+H*0.1,
-    width:Math.random()*2+0.5,
-    alpha:Math.random()*0.9+0.1,
-    jitter:Math.random()*8+1,
-    life:1.0, decay:0.01+Math.random()*0.018,
-    branches:Math.random()<density*1.5+0.1,
-  });
-}
+  // BREATHING CAMERA
+  const breatheX=Math.sin(t*0.007)*0.18+Math.sin(t*0.013)*0.08;
+  const breatheY=Math.cos(t*0.009)*0.12+Math.cos(t*0.017)*0.05;
+  const breatheZ=5.5+Math.sin(t*0.005)*0.25;
+  camera.position.set(breatheX,breatheY,breatheZ);
+  camera.lookAt(0,0,0);
 
-function initFragments(){
-  const base=5+Math.floor(density*80);
-  for(let i=0;i<base;i++) spawnFragment(wordBank[i%Math.max(1,wordBank.length)]||'void');
-  for(let i=0;i<Math.floor(density*4);i++) spawnCascade(null);
-}
-
-function perspective(z){return 400/(400-z);}
-
-function drawOrganicBlob(ctx,f,r,corrupt){
-  const steps=56;
-  ctx.beginPath();
-  for(let i=0;i<=steps;i++){
-    const angle=(i/steps)*Math.PI*2;
-    const nx=Math.cos(angle)*f.warp+f.noiseOff;
-    const ny=Math.sin(angle)*f.warp+f.noiseOff+f.phase*0.3;
-    const n=noise2(nx*1.3,ny*1.3)+noise2(nx*3+20,ny*3+20)*0.3+noise2(nx*7+50,ny*7+50)*0.1;
-    const jit=corrupt?(Math.random()-0.5)*r*0.2:0;
-    const rad=r*(0.35+n*0.85)+jit;
-    const px=Math.cos(angle)*rad, py=Math.sin(angle)*rad;
-    i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
-  }
-  ctx.closePath();
-}
-
-function drawOrganicCurve(ctx,f,r){
-  const pts=f.filPts;
-  ctx.beginPath();
-  for(let k=0;k<=pts;k++){
-    const angle=(k/pts)*Math.PI*2+f.phase*0.5;
-    const jit=f.corrupt?(Math.random()-0.5)*r*0.25:0;
-    const nr=r*(0.45+noise2(f.noiseOff+k*0.45,f.phase*0.4)*1.0)+jit;
-    const px=Math.cos(angle)*nr, py=Math.sin(angle)*nr;
-    k===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
-  }
-  ctx.closePath();
-  ctx.stroke();
-}
-
-function drawForeground(){
-  fg.clearRect(0,0,W,H);
-  const speed=1+density*3.5;
-
-  // cascades
-  for(let i=cascades.length-1;i>=0;i--){
-    const c=cascades[i];
-    c.y+=c.vy*speed; c.life-=c.decay;
-    if(c.y>H+50||c.life<=0){cascades.splice(i,1);continue;}
-    const ca=c.alpha*c.life;
-    const [r,g,b]=c.rgb;
-    fg.save(); fg.translate(c.x,c.y);
-    // bloom
-    fg.strokeStyle=`rgba(${r},${g},${b},${(ca*0.12).toFixed(2)})`;
-    fg.lineWidth=c.width*5;
-    fg.shadowColor=`rgb(${r},${g},${b})`; fg.shadowBlur=14;
-    drawCascadeLine(fg,c);
-    fg.shadowBlur=0;
-    fg.strokeStyle=`rgba(${r},${g},${b},${ca.toFixed(2)})`;
-    fg.lineWidth=c.width;
-    drawCascadeLine(fg,c);
-    if(c.branches){
-      fg.strokeStyle=`rgba(${r},${g},${b},${(ca*0.4).toFixed(2)})`;
-      fg.lineWidth=c.width*0.5;
-      fg.beginPath(); fg.moveTo(0,-(c.len*0.4));
-      fg.lineTo((Math.random()-0.5)*90,-(c.len*0.4)-Math.random()*110);
-      fg.stroke();
+  // MORPHING — lerp positions/scales
+  if(morphing){
+    morphT++;
+    const ease=morphT/morphDuration;
+    const s=ease<0.5?2*ease*ease:1-Math.pow(-2*ease+2,2)/2; // ease in-out
+    for(let i=0;i<Math.min(forms.length,prevPositions.length);i++){
+      forms[i].position.lerpVectors(prevPositions[i],targetPositions[i],s);
+      const sc=prevScales[i]+(targetScales[i]-prevScales[i])*s;
+      forms[i].scale.setScalar(sc);
     }
-    fg.restore();
+    if(morphT>=morphDuration){
+      morphing=false;
+      // now actually rebuild with new geometry
+      rebuildForms(params,false);
+    }
   }
-  if(Math.random()<density*0.08+0.003) spawnCascade(null);
 
-  // organic fragments
-  for(let i=0;i<fragments.length;i++){
-    const f=fragments[i];
-    f.x+=f.vx*speed; f.y+=f.vy*speed; f.z+=f.vz*speed;
-    f.rot+=f.vrot*speed; f.phase+=f.wobble;
+  for(let i=0;i<forms.length;i++){
+    const f=forms[i]; const ud=f.userData;
 
-    const bound=Math.max(100,Math.min(W,H)*0.6-density*150);
-    const cx=W/2, cy=H/2;
-    if(f.x>cx+bound)f.x=cx-bound; if(f.x<cx-bound)f.x=cx+bound;
-    if(f.y>cy+bound+80)f.y=cy-bound-80; if(f.y<cy-bound-80)f.y=cy+bound+80;
-    if(f.z>250)f.z=-250; if(f.z<-250)f.z=250;
-
-    const sc=perspective(f.z);
-    const px=cx+(f.x-cx)*sc, py=cy+(f.y-cy)*sc, pr=f.r*sc;
-    const [r,g,b]=f.rgb;
-    const alpha=f.alpha;
-
-    fg.save(); fg.translate(px,py); fg.rotate(f.rot);
-    if(density>0.3&&Math.random()<density*0.1)
-      fg.translate((Math.random()-0.5)*density*20,(Math.random()-0.5)*density*20);
-
-    if(f.filament){
-      fg.strokeStyle=`rgba(${r},${g},${b},${(alpha*0.1).toFixed(2)})`;
-      fg.lineWidth=pr*0.2; fg.shadowColor=`rgb(${r},${g},${b})`; fg.shadowBlur=8;
-      drawOrganicCurve(fg,f,pr*1.3);
-      fg.shadowBlur=0;
-      fg.strokeStyle=`rgba(${r},${g},${b},${alpha.toFixed(2)})`;
-      fg.lineWidth=1.2;
-      drawOrganicCurve(fg,f,pr);
-      if(density>0.08){
-        fg.strokeStyle=`rgba(${b},${r},${g},${(alpha*0.18).toFixed(2)})`;
-        fg.lineWidth=0.8;
-        fg.translate(density*9,density*3);
-        drawOrganicCurve(fg,f,pr);
+    if(destructionMode){
+      // VERTEX TEARING — rebuild geo with extreme displacement each frame
+      if(Math.random()<0.08){
+        const newGeo=buildGeo(
+          Math.floor(Math.random()*5),
+          Math.floor(Math.random()*6+3),
+          params.noiseFreq*(Math.random()*5+1),
+          params.noiseAmp*(Math.random()*5+1),
+          Math.random(), params.hash+i+frameT, Math.random()*6+1
+        );
+        f.geometry.dispose();
+        f.geometry=newGeo;
+      }
+      // SPAZ movement
+      f.position.x+=ud.spazVx*(1.5+Math.sin(t*0.3+i)*1.5);
+      f.position.y+=ud.spazVy*(1.5+Math.cos(t*0.25+i)*1.5);
+      f.position.z+=ud.spazVz;
+      if(Math.abs(f.position.x)>5){ud.spazVx*=-1;}
+      if(Math.abs(f.position.y)>5){ud.spazVy*=-1;}
+      if(Math.abs(f.position.z)>3){ud.spazVz*=-1;}
+      if(Math.random()<0.04){
+        f.position.x+=(Math.random()-0.5)*1.8;
+        f.position.y+=(Math.random()-0.5)*1.8;
+      }
+      // CLONING effect — random scale pulses
+      f.scale.setScalar(ud.baseScale*(0.3+Math.random()*2.5));
+      f.rotateOnAxis(ud.rotAxis,ud.rotSpeed*4);
+      if(f.material.uniforms){
+        f.material.uniforms.uEmitInt.value=Math.random()*5+0.5;
+        f.material.uniforms.uTime.value=t*0.08+Math.random()*3;
+        f.material.uniforms.uScanFreq.value=10+Math.random()*300;
       }
     } else {
-      fg.fillStyle=`rgba(${r},${g},${b},${(alpha*0.07).toFixed(2)})`;
-      fg.shadowColor=`rgb(${r},${g},${b})`; fg.shadowBlur=16;
-      drawOrganicBlob(fg,f,pr*1.5,false); fg.fill();
-      fg.fillStyle=`rgba(${r},${g},${b},${(alpha*0.55).toFixed(2)})`;
-      fg.shadowBlur=0;
-      drawOrganicBlob(fg,f,pr,f.corrupt); fg.fill();
-      fg.strokeStyle=`rgba(${r},${g},${b},${(alpha*0.9).toFixed(2)})`;
-      fg.lineWidth=1; fg.stroke();
-      if(f.corrupt||density>0.18){
-        fg.fillStyle='rgba(0,0,0,0.5)';
-        const bars=Math.floor(Math.random()*4+1);
-        for(let bk=0;bk<bars;bk++){
-          const by=(Math.random()-0.5)*pr*2;
-          fg.fillRect(-pr*1.8,by,pr*3.6,Math.random()*4+1);
+      if(!morphing){
+        f.rotateOnAxis(ud.rotAxis,ud.rotSpeed*(1+density*2));
+        ud.phase+=ud.wobble*(1+density*1.5);
+        const pulse=1+Math.sin(ud.phase)*0.07*(1+density);
+        f.scale.setScalar(ud.baseScale*pulse);
+        if(density>0.3&&Math.random()<density*0.07){
+          f.position.x+=(Math.random()-0.5)*density*0.1;
+          f.position.y+=(Math.random()-0.5)*density*0.1;
         }
       }
+      if(f.material.uniforms){
+        const flicker=Math.random()<0.04+density*0.08?0.55+Math.random()*0.45:1;
+        f.material.uniforms.uEmitInt.value=(0.7+density*0.9)*flicker;
+        f.material.uniforms.uTime.value=t*0.018;
+      }
     }
-    fg.restore();
+  }
+
+  // orbit lights
+  if(activeLights.length>0){
+    const lt=t*0.01;
+    activeLights[0].position.x=Math.sin(lt)*1.8*(destructionMode?2.5:1);
+    activeLights[0].position.y=Math.cos(lt*0.7)*1.2*(destructionMode?2.5:1);
+    activeLights[0].intensity=params.lightIntens*(1+density*1.5)*(destructionMode?3.5:1)*(0.85+Math.sin(t*0.06)*0.15);
+    if(activeLights[1]){
+      activeLights[1].position.x=Math.cos(lt*1.3)*1.4;
+      activeLights[1].position.y=Math.sin(lt*0.9)*1.0;
+    }
+    // core flicker — drives bloom
+    if(activeLights[2]){
+      activeLights[2].intensity=params.lightIntens*1.8*(destructionMode?3:1)*(0.75+Math.random()*0.5+density*0.3);
+      activeLights[2].position.x=Math.sin(lt*2.1)*0.4;
+      activeLights[2].position.y=Math.cos(lt*1.7)*0.3;
+    }
+    if(activeLights[3]){
+      activeLights[3].intensity=params.lightIntens*0.9*(destructionMode?2:1)*(0.6+Math.random()*0.8);
+    }
+  }
+
+  formGroup.rotation.y+=params.rotSpeed*(1+density*1.5)*(destructionMode?3:1);
+  formGroup.rotation.x+=params.rotSpeed*0.28*(destructionMode?2:1);
+
+  if(destructionMode){
+    destructionTimer--;
+    if(destructionTimer<=0) endDestruction();
   }
 }
 
-function drawCascadeLine(ctx,c){
-  const steps=Math.floor(c.len/7);
-  ctx.beginPath(); ctx.moveTo(0,0);
-  let cx2=0,cy2=0;
-  for(let s=0;s<steps;s++){
-    cx2+=(Math.random()-0.5)*c.jitter; cy2-=7;
-    ctx.lineTo(cx2,cy2);
-  }
-  ctx.stroke();
+// ============================================================
+// DESTRUCTION
+// ============================================================
+function triggerDestruction(){
+  destructionMode=true; destructionTimer=200;
+  submissionsSinceDestruction=0;
+  morphing=false;
+  // white flash
+  const wf=document.getElementById('whiteFlash');
+  wf.style.opacity='0.9';
+  setTimeout(()=>wf.style.opacity='0',80);
+  rebuildForms(params,true);
+}
+
+function endDestruction(){
+  destructionMode=false; destructionTimer=0;
+  const wf=document.getElementById('whiteFlash');
+  wf.style.opacity='0.7';
+  setTimeout(()=>wf.style.opacity='0',60);
+  rebuildForms(params,false);
 }
 
 // ============================================================
@@ -514,29 +638,47 @@ function drawCascadeLine(ctx,c){
 // ============================================================
 function loop(){
   requestAnimationFrame(loop);
-  frameT++; submitFlash=Math.max(0,submitFlash-1);
-  drawBackground();
-  drawForeground();
+  frameT++;
+  submitFlash=Math.max(0,submitFlash-1);
+  animateForms();
+  renderer.render(scene,camera);
+  drawBloom();
+  drawTears();
 }
 
 // ============================================================
 // SUBMIT
 // ============================================================
-const RAND_WORDS=['void','static','break','lapse','decay','ghost','hollow','surge','bleed','crash','rift','pulse','scar','echo','drift','noise','tear','sink','raw','burn'];
+const RAND_WORDS=['void','static','break','lapse','decay','ghost','hollow','surge','bleed','crash','rift','pulse','scar','echo','drift','noise','tear','sink','raw','burn','wraith','collapse','signal','error','null','fracture','abject','rupture','flare','hollow'];
 
 function addWord(word){
   wordBank.push(word);
   density=Math.min(1,density+0.022);
-  params=seedParams(word);
-  params.bleedAmt=Math.min(0.93,params.bleedAmt+density*0.22);
-  params.shiftAmt=params.shiftAmt*(1+density*1.6);
-  params.blobWarp=(params.blobWarp||0.5)*(1+density*0.5);
-  submitFlash=24;
-  const nf=Math.floor(3+density*8);
-  for(let i=0;i<nf;i++) spawnFragment(word);
-  const nc=Math.floor(Math.random()*3+1+density*5);
-  for(let i=0;i<nc;i++) spawnCascade(randNeon());
-  if(fragments.length>300) fragments.splice(0,20);
+  const newParams=seedParams(word);
+  newParams.shiftAmt=newParams.shiftAmt*(1+density*1.4);
+  submissionsSinceDestruction++;
+  submitFlash=26;
+
+  if(!destructionMode){
+    if(submissionsSinceDestruction>=DESTRUCTION_INTERVAL&&Math.random()<0.7){
+      params=newParams;
+      triggerDestruction();
+    } else {
+      // start morph to new state
+      startMorph(newParams);
+      params=newParams;
+      // update lights + fog immediately
+      buildLights(params,false);
+      const vc=params.voidColor;
+      scene.fog.color.setRGB(vc[0]/255*0.5,vc[1]/255*0.5,vc[2]/255*0.5);
+      renderer.setClearColor(new THREE.Color(vc[0]/4096,vc[1]/4096,vc[2]/4096),1);
+    }
+  } else {
+    params=newParams;
+    rebuildForms(params,true);
+    destructionTimer=Math.max(destructionTimer,140);
+  }
+
   persist();
   updateUI(word);
 }
@@ -547,9 +689,9 @@ function updateUI(lastWord){
   if(lastWord){
     document.getElementById('latestWord').textContent='"'+lastWord+'"';
     const fb=document.getElementById('feedback');
-    fb.textContent=lastWord+' — permanent';
+    fb.textContent='"'+lastWord+'"';
     fb.classList.add('show');
-    setTimeout(()=>fb.classList.remove('show'),1200);
+    setTimeout(()=>fb.classList.remove('show'),900);
   }
 }
 
@@ -569,8 +711,8 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
 document.getElementById('addTenBtn').addEventListener('click',()=>{
   for(let i=0;i<10;i++) addWord(RAND_WORDS[Math.floor(Math.random()*RAND_WORDS.length)]);
 });
+document.getElementById('destroyBtn').addEventListener('click',triggerDestruction);
 
-initFragments();
 updateUI(null);
 loop();
 </script>
