@@ -18,46 +18,51 @@
     position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:3; pointer-events:none;
     background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
   }
+  /* vignette — crushes the edges, forces eye to center */
+  #vignette {
+    position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:4; pointer-events:none;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.25) 70%, rgba(0,0,0,0.65) 100%);
+  }
   #ui {
     position:fixed; bottom:0; left:0; right:0; z-index:10;
     padding:10px 14px 22px;
-    background:linear-gradient(transparent, rgba(0,0,0,0.88) 45%);
+    background:linear-gradient(transparent, rgba(0,0,0,0.92) 45%);
   }
   .input-row { display:flex; gap:6px; align-items:center; margin-bottom:5px; }
-  .prompt { color:#ffff00; font-size:13px; white-space:nowrap; }
+  .prompt { color:#884030; font-size:13px; white-space:nowrap; }
   input[type=text] {
-    flex:1; background:transparent; border:none; border-bottom:1px solid #ffff00;
-    outline:none; color:#ffff00; font-family:"Courier New",monospace;
-    font-size:14px; padding:3px 4px; caret-color:#ffff00;
+    flex:1; background:transparent; border:none; border-bottom:1px solid #55302a;
+    outline:none; color:#884030; font-family:"Courier New",monospace;
+    font-size:14px; padding:3px 4px; caret-color:#884030;
   }
-  input::placeholder { color:#555500; }
+  input::placeholder { color:#331815; }
   button#submitBtn {
-    background:transparent; border:1px solid #ffff00; color:#ffff00;
+    background:transparent; border:1px solid #55302a; color:#884030;
     font-family:"Courier New",monospace; font-size:13px; padding:3px 10px; cursor:pointer;
   }
-  button#submitBtn:active { background:#ffff00; color:#000; }
-  .meta { display:flex; justify-content:space-between; font-size:10px; color:#555500; }
-  .meta .lw { color:#ffff00; }
+  button#submitBtn:active { background:#884030; color:#000; }
+  .meta { display:flex; justify-content:space-between; font-size:10px; color:#33201a; }
+  .meta .lw { color:#55302a; }
   #dev {
     position:fixed; top:0; left:0; z-index:20; padding:6px 8px; display:flex; gap:6px;
     opacity:0.12; transition:opacity 0.2s;
   }
   #dev:hover { opacity:1; }
   #dev button {
-    background:transparent; border:1px solid #ffff00; color:#ffff00;
+    background:transparent; border:1px solid #55302a; color:#884030;
     font-family:"Courier New",monospace; font-size:9px; padding:2px 6px; cursor:pointer;
   }
-  #dev button:active { background:#ffff00; color:#000; }
+  #dev button:active { background:#884030; color:#000; }
   #feedback {
     position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-    color:#ffff00; font-size:13px; font-family:"Courier New",monospace;
-    pointer-events:none; opacity:0; transition:opacity 0.08s; z-index:15;
-    text-align:center; white-space:nowrap; text-shadow: 0 0 20px #ffff00, 0 0 40px #ffff00;
+    color:#884030; font-size:13px; font-family:"Courier New",monospace;
+    pointer-events:none; opacity:0; transition:opacity 0.15s; z-index:15;
+    text-align:center; white-space:nowrap; text-shadow: 0 0 30px rgba(120,30,20,0.6);
   }
   #feedback.show { opacity:1; }
   #whiteFlash {
     position:fixed; inset:0; z-index:9; pointer-events:none;
-    background:#fff; opacity:0; transition:opacity 0.05s;
+    background:#200505; opacity:0; transition:opacity 0.12s;
   }
 </style>
 </head>
@@ -66,6 +71,7 @@
 <canvas id="bloomCanvas"></canvas>
 <canvas id="tearCanvas"></canvas>
 <div id="glitchOverlay"></div>
+<div id="vignette"></div>
 <div id="whiteFlash"></div>
 <div id="feedback"></div>
 <div id="dev">
@@ -88,15 +94,34 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // ============================================================
-// UTILS
+// PALETTE — bruised, sickly, deep
 // ============================================================
-const NEONS=[
-  [255,0,255],[0,255,255],[255,255,0],[0,255,0],
-  [255,0,100],[0,100,255],[255,80,0],[180,0,255],
-  [0,255,150],[255,0,0],[255,200,0],[100,0,255],
-  [0,255,80],[255,50,200],[0,200,255]
+const PALETTE=[
+  [220,30,40],   // hot arterial red
+  [180,0,80],    // neon bruise magenta
+  [90,20,180],   // electric contusion purple
+  [30,200,50],   // sickly neon green
+  [160,10,10],   // bright blood
+  [120,40,200],  // vivid bruise violet
+  [200,120,15],  // infected neon amber
+  [0,200,140],   // toxic teal
+  [255,40,90],   // visceral neon pink
+  [140,20,10],   // ember rust
+  [200,0,160],   // livid magenta
+  [0,160,80],    // swamp neon
+  [220,80,10],   // burnt neon orange
+  [140,0,90],    // clot magenta
+  [180,180,0],   // sick yellow
 ];
-function randNeon(){return NEONS[Math.floor(Math.random()*NEONS.length)];}
+
+// accent flashes — violence moments
+const ACCENT_NEONS=[
+  [255,40,30],[255,0,180],[0,255,100],[255,255,0],[0,200,255]
+];
+
+function randPalette(){ return PALETTE[Math.floor(Math.random()*PALETTE.length)]; }
+function randAccent(){ return ACCENT_NEONS[Math.floor(Math.random()*ACCENT_NEONS.length)]; }
+
 function hashWord(w){
   let h=2166136261;
   for(let i=0;i<w.length;i++){h^=w.charCodeAt(i);h=(h*16777619)>>>0;}
@@ -122,29 +147,45 @@ function noise3(x,y,z){
 }
 
 // ============================================================
+// EASING — uncanny motion curves
+// ============================================================
+// slow crawl that suddenly snaps — like something pretending to be still
+function uncannyEase(t){
+  if(t<0.7) return t*t*t*0.3; // barely moving
+  return 0.3*0.343 + (t-0.7)/0.3 * (1-0.3*0.343); // then snaps to target
+}
+// labored breathing — inhale slow, exhale slower, with a hitch
+function laboredBreath(t){
+  const phase = t % 1;
+  if(phase < 0.4) return Math.pow(phase/0.4, 0.6); // slow inhale
+  if(phase < 0.45) return 1.0; // hold — the hitch
+  return 1.0 - Math.pow((phase-0.45)/0.55, 0.4); // even slower exhale
+}
+
+// ============================================================
 // STATE
 // ============================================================
 function seedParams(word){
   const h=hashWord(String(word));
   const rng=seededRNG(h);
-  const sp=rng(); // spikiness 0-1
-  // void color — tinted from word hash
+  const sp=rng();
   const voidHue=rng();
-  const voidR=voidHue<0.33?Math.floor(rng()*25+5):Math.floor(rng()*8);
-  const voidG=voidHue>0.33&&voidHue<0.66?Math.floor(rng()*20+3):Math.floor(rng()*5);
-  const voidB=voidHue>0.66?Math.floor(rng()*30+8):Math.floor(rng()*15+5);
+  // void colors — very dark, slightly tinted
+  const voidR=voidHue<0.33?Math.floor(rng()*12+2):Math.floor(rng()*4);
+  const voidG=voidHue>0.33&&voidHue<0.66?Math.floor(rng()*8+1):Math.floor(rng()*3);
+  const voidB=voidHue>0.66?Math.floor(rng()*15+3):Math.floor(rng()*6+2);
   return{
-    formCount:   Math.floor(rng()*3+2),
+    formCount:   Math.floor(rng()*2+1), // FEWER forms — negative space
     spikiness:   sp,
-    noiseFreq:   sp>0.7 ? rng()*4+2 : rng()*1.5+0.4,   // high spike = high freq
-    noiseAmp:    sp>0.7 ? rng()*1.8+0.8 : rng()*0.6+0.2, // high spike = high amp
-    lightCol1:   [Math.floor(rng()*NEONS.length),Math.floor(rng()*NEONS.length)],
-    lightIntens: rng()*3+1.5,
-    rotSpeed:    rng()*0.004+0.001,
-    tearCount:   Math.floor(rng()*3+1),
-    shiftAmt:    rng()*40+8,
-    scanlines:   Math.floor(rng()*8+3),
-    bloomIntens: rng()*0.3+0.25,
+    noiseFreq:   sp>0.7 ? rng()*3+1.5 : rng()*1.2+0.3,
+    noiseAmp:    sp>0.7 ? rng()*1.5+0.6 : rng()*0.5+0.15,
+    lightCol1:   [Math.floor(rng()*PALETTE.length),Math.floor(rng()*PALETTE.length)],
+    lightIntens: rng()*2.5+1.5,
+    rotSpeed:    rng()*0.0015+0.0003,
+    tearCount:   Math.floor(rng()*2+1),
+    shiftAmt:    rng()*20+4,
+    scanlines:   Math.floor(rng()*4+2),
+    bloomIntens: rng()*0.3+0.3,
     baseType:    Math.floor(rng()*5),
     voidColor:   [voidR,voidG,voidB],
     word, hash:h
@@ -159,8 +200,18 @@ let destructionMode=false, destructionTimer=0;
 let submissionsSinceDestruction=0;
 const DESTRUCTION_INTERVAL=20;
 
+// violence state — occasional moments of casual brutality
+let violenceCooldown=0;
+let violenceActive=false;
+let violenceTimer=0;
+
+// escalation — slower growth, but heavier
+function escalation(){ return 1 + wordBank.length * 0.025; }
+function jitterAmt(){ return 0.002 + wordBank.length * 0.0004; } // much less jitter
+function spikeProbability(){ return 0.0001 + wordBank.length * 0.00004; }
+
 // morphing state
-let morphing=false, morphT=0, morphDuration=45;
+let morphing=false, morphT=0, morphDuration=90; // SLOWER morph (was 45)
 let prevPositions=[], targetPositions=[];
 let prevScales=[], targetScales=[];
 
@@ -180,12 +231,12 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
 renderer.setSize(window.innerWidth,window.innerHeight);
 renderer.setClearColor(0x000000,1);
 renderer.toneMapping=THREE.ReinhardToneMapping;
-renderer.toneMappingExposure=2.5;
+renderer.toneMappingExposure=3.2;
 
 const scene=new THREE.Scene();
-scene.fog=new THREE.FogExp2(0x000005,0.028);
+scene.fog=new THREE.FogExp2(0x000003,0.018); // thicker fog — forms dissolve into dark
 
-const camera=new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,0.1,100);
+const camera=new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,0.1,100); // narrower FOV — claustrophobic
 camera.position.set(0,0,5.5);
 
 window.addEventListener('resize',()=>{
@@ -197,27 +248,30 @@ window.addEventListener('resize',()=>{
 });
 
 // ============================================================
-// SHADER MATERIAL — scanlines glitch at edges, fade on bright
+// SHADER MATERIAL — darker, heavier, more oppressive
 // ============================================================
 function makeMat(col,col2,spikiness,opacity,wireframe){
-  const c1=new THREE.Color(col[0]/255*0.18,col[1]/255*0.18,col[2]/255*0.18);
-  const e1=new THREE.Color(col2[0]/255*0.55,col2[1]/255*0.55,col2[2]/255*0.55);
+  const c1=new THREE.Color(col[0]/255*0.5,col[1]/255*0.5,col[2]/255*0.5);
+  const e1=new THREE.Color(col2[0]/255*1.2,col2[1]/255*1.2,col2[2]/255*1.2);
   return new THREE.ShaderMaterial({
     uniforms:{
       uColor:    {value:c1},
       uEmissive: {value:e1},
-      uEmitInt:  {value:0.7+density*0.9},
-      uScanFreq: {value:60+spikiness*160},
+      uEmitInt:  {value:0.6+density*0.7},
+      uScanFreq: {value:40+spikiness*80}, // fewer scanlines
       uTime:     {value:0},
       uOpacity:  {value:opacity},
       uSpiky:    {value:spikiness},
+      uDread:    {value:0}, // 0-1, pulses during violence
     },
     vertexShader:`
       varying vec3 vNormal;
+      varying vec3 vWorldPos;
       varying vec4 vClipPos;
       varying float vDepth;
       void main(){
         vNormal=normalize(normalMatrix*normal);
+        vWorldPos=(modelMatrix*vec4(position,1.0)).xyz;
         gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
         vClipPos=gl_Position;
         vDepth=gl_Position.z/gl_Position.w;
@@ -231,45 +285,52 @@ function makeMat(col,col2,spikiness,opacity,wireframe){
       uniform float uTime;
       uniform float uOpacity;
       uniform float uSpiky;
+      uniform float uDread;
       varying vec3 vNormal;
+      varying vec3 vWorldPos;
       varying vec4 vClipPos;
       varying float vDepth;
 
       void main(){
         vec2 sc=vClipPos.xy/vClipPos.w;
 
-        // edge detection — how much are we grazing the surface
+        // edge detection
         float edge=1.0-abs(dot(vNormal,vec3(0,0,1)));
-        float edgeFactor=pow(edge,1.5);
+        float edgeFactor=pow(edge,2.0); // sharper edge falloff
 
-        // scanlines — break and glitch at edges
-        float scanRaw=sin(sc.y*uScanFreq+uTime*0.4);
-        // break scanlines at edges — add noise offset
-        float glitchOffset=edgeFactor*sin(sc.y*uScanFreq*3.1+uTime*2.0)*0.3;
-        float scan=sin(sc.y*uScanFreq+uTime*0.4+glitchOffset*3.0);
-        float scanLine=smoothstep(0.1,0.9,scan);
-        float dark=1.0-scanLine*(0.22+uSpiky*0.15);
+        // scanlines — slower, heavier
+        float glitchOffset=edgeFactor*sin(sc.y*uScanFreq*2.0+uTime*0.8)*0.2;
+        float scan=sin(sc.y*uScanFreq+uTime*0.15+glitchOffset*2.0);
+        float scanLine=smoothstep(0.2,0.8,scan);
+        float dark=1.0-scanLine*(0.3+uSpiky*0.12);
 
         // diffuse
-        vec3 ld=normalize(vec3(0.4,0.8,1.2));
-        float diff=max(dot(vNormal,ld),0.0)*0.7+0.3;
+        vec3 ld=normalize(vec3(0.3,0.6,1.0));
+        float diff=max(dot(vNormal,ld),0.0)*0.6+0.25;
 
-        // bright faces — scanlines fade out
         float brightness=diff;
-        float scanFade=1.0-smoothstep(0.6,1.0,brightness)*0.7;
+        float scanFade=1.0-smoothstep(0.5,0.9,brightness)*0.6;
         dark=mix(1.0,dark,scanFade);
 
         vec3 col=uColor*diff*dark+uEmissive*uEmitInt*dark;
 
-        // chromatic edge aberration
-        col.r+=edgeFactor*0.12*sin(sc.y*uScanFreq*0.95+uTime);
-        col.b+=edgeFactor*0.10*sin(sc.y*uScanFreq*1.05-uTime);
+        // subsurface scattering hint — light bleeding through thin parts
+        float sss=pow(max(0.0,dot(vNormal,-ld)),3.0)*0.15;
+        col+=uEmissive*sss*uEmitInt;
 
-        // depth fog softening (dof hint)
-        float fogFactor=smoothstep(0.3,1.0,vDepth*0.5+0.5);
-        col=mix(col,vec3(0.0),fogFactor*0.5);
+        // chromatic edge — subtler
+        col.r+=edgeFactor*0.06*sin(sc.y*uScanFreq*0.9+uTime*0.5);
+        col.b+=edgeFactor*0.04*sin(sc.y*uScanFreq*1.1-uTime*0.3);
 
-        gl_FragColor=vec4(col,uOpacity*(1.0-fogFactor*0.4));
+        // dread pulse — darkens everything, slight red shift
+        col*=1.0-uDread*0.2;
+        col.r+=uDread*0.05;
+
+        // depth fog — subtle
+        float fogFactor=smoothstep(0.4,1.0,vDepth*0.5+0.5);
+        col=mix(col,vec3(0.0),fogFactor*0.35);
+
+        gl_FragColor=vec4(col,uOpacity*(1.0-fogFactor*0.2));
       }
     `,
     transparent:true,
@@ -299,7 +360,6 @@ function buildGeo(baseType,segments,noiseFreq,noiseAmp,spikiness,seed,destructMu
     const n2=noise3(x*noiseFreq*2.5+10,y*noiseFreq*2.5+10,z*noiseFreq*2.5)*0.4;
     const n3=noise3(x*noiseFreq*6+30,y*noiseFreq*6+30,z*noiseFreq*6)*0.15;
     const rawN=n1+n2+n3;
-    // spikiness varies wildly — sharp exponent for high values
     const spiked=spikiness>0.6
       ? Math.pow(Math.abs(rawN),0.3+spikiness*0.5)*Math.sign(rawN)*1.4
       : rawN;
@@ -331,45 +391,52 @@ function spawnForm(p,idx,isDestruction){
     sp, p.hash+idx, dm
   );
   const colIdx=p.lightCol1[idx%2];
-  const col2Idx=(colIdx+Math.floor(rng()*7)+1)%NEONS.length;
-  const col=NEONS[colIdx], col2=NEONS[col2Idx];
-  const wireframe=isDestruction?rng()<0.45:sp>0.78&&rng()<0.4;
-  const mat=makeMat(col,col2,isDestruction?rng():sp,isDestruction?0.55+rng()*0.45:0.82+rng()*0.18,wireframe);
+  const col2Idx=(colIdx+Math.floor(rng()*7)+1)%PALETTE.length;
+  const col=PALETTE[colIdx], col2=PALETTE[col2Idx];
+  const wireframe=isDestruction?rng()<0.35:sp>0.8&&rng()<0.3;
+  const mat=makeMat(col,col2,isDestruction?rng():sp,isDestruction?0.45+rng()*0.45:0.75+rng()*0.25,wireframe);
 
   const mesh=new THREE.Mesh(geo,mat);
-  const spread=isDestruction?3.5+rng()*2.5:Math.max(0.3,1.8-density*0.9);
-  mesh.position.set((rng()-0.5)*spread*2.5,(rng()-0.5)*spread*2,(rng()-0.5)*spread*1.8);
-  const scale=isDestruction?rng()*2.2+0.2:rng()*0.85+0.45;
+  // MORE SPACE between forms — negative space matters
+  const spread=isDestruction?3.5+rng()*2.5:Math.max(0.8,2.5-density*0.6);
+  mesh.position.set((rng()-0.5)*spread*2.2,(rng()-0.5)*spread*1.8,(rng()-0.5)*spread*1.5);
+  const scale=isDestruction?rng()*2.2+0.2:rng()*1.0+0.5;
   mesh.scale.setScalar(scale);
   mesh.userData={
     rotAxis:new THREE.Vector3(rng()-0.5,rng()-0.5,rng()-0.5).normalize(),
-    rotSpeed:(rng()*0.01+0.001)*(1+density*2)*(isDestruction?rng()*6+2:1),
-    phase:rng()*1000, wobble:rng()*0.012+0.002,
+    rotSpeed:(rng()*0.004+0.0005)*(1+density*1)*(isDestruction?rng()*4+1.5:1), // slower base rotation
+    phase:rng()*1000, wobble:rng()*0.005+0.001, // slower wobble
     baseScale:scale, isDestruction,
-    spazVx:isDestruction?(rng()-0.5)*0.12:0,
-    spazVy:isDestruction?(rng()-0.5)*0.12:0,
-    spazVz:isDestruction?(rng()-0.5)*0.06:0,
+    spazVx:isDestruction?(rng()-0.5)*0.06:0, // slower spaz
+    spazVy:isDestruction?(rng()-0.5)*0.06:0,
+    spazVz:isDestruction?(rng()-0.5)*0.03:0,
     morphSeed:rng()*1000,
     col,col2,sp,segments,
+    baseType:isDestruction?Math.floor(rng()*5):p.baseType,
+    // UNCANNY: each form has a "stillness" timer — it stops moving, then lurches
+    stillTimer:0,
+    stillDuration:0,
+    isStill:false,
+    lurchCooldown:Math.floor(rng()*300+100),
   };
   return mesh;
 }
 
 function buildLights(p,isDestruction){
   scene.children.filter(c=>c.isLight).forEach(l=>scene.remove(l));
-  const c1=NEONS[p.lightCol1[0]], c2=NEONS[p.lightCol1[1]];
-  const im=isDestruction?3.5:1;
+  const c1=PALETTE[p.lightCol1[0]], c2=PALETTE[p.lightCol1[1]];
+  const im=isDestruction?2.5:1;
+  // dimmer, more directional — pools of light in darkness
   const l1=new THREE.PointLight(new THREE.Color(c1[0]/255,c1[1]/255,c1[2]/255),p.lightIntens*(1+density*1.5)*im,15);
   l1.position.set(0.3,0.5,1.5); scene.add(l1);
-  const l2=new THREE.PointLight(new THREE.Color(c2[0]/255,c2[1]/255,c2[2]/255),p.lightIntens*0.6*(1+density)*im,12);
+  const l2=new THREE.PointLight(new THREE.Color(c2[0]/255,c2[1]/255,c2[2]/255),p.lightIntens*0.9*(1+density)*im,12);
   l2.position.set(-1.2,-0.6,-1); scene.add(l2);
-  // WHITE OVEREXPOSED CORE — key to bloom
-  const core=new THREE.PointLight(0xffffff,p.lightIntens*1.8*(isDestruction?3:1),4);
+  // core light — bright white
+  const core=new THREE.PointLight(0xffffff,p.lightIntens*2.0*(isDestruction?2.5:1),5);
   core.position.set(0,0,0.2); scene.add(core);
-  // second white core slightly offset
-  const core2=new THREE.PointLight(0xffffff,p.lightIntens*0.9*(isDestruction?2:1),3);
+  const core2=new THREE.PointLight(0xffffff,p.lightIntens*1.0*(isDestruction?2:1),4);
   core2.position.set(0.3,-0.2,0.8); scene.add(core2);
-  // bruised ambient
+  // ambient
   const vc=p.voidColor;
   scene.add(new THREE.AmbientLight(new THREE.Color(vc[0]/255,vc[1]/255,vc[2]/255),0.8));
   return [l1,l2,core,core2];
@@ -378,45 +445,43 @@ function buildLights(p,isDestruction){
 function rebuildForms(p,isDestruction){
   while(formGroup.children.length) formGroup.remove(formGroup.children[0]);
   forms.length=0;
-  const count=isDestruction?Math.floor(Math.random()*14+8):p.formCount+Math.floor(density*4);
+  // FEWER forms — space to breathe in darkness
+  const count=isDestruction?Math.floor(Math.random()*10+5):p.formCount+Math.floor(density*2);
   for(let i=0;i<count;i++){
     const m=spawnForm(p,i,isDestruction);
     formGroup.add(m); forms.push(m);
   }
   activeLights=buildLights(p,isDestruction);
-  // update fog to void color
   const vc=p.voidColor;
-  scene.fog.color.setRGB(vc[0]/255*0.5,vc[1]/255*0.5,vc[2]/255*0.5);
-  renderer.setClearColor(new THREE.Color(vc[0]/4096,vc[1]/4096,vc[2]/4096),1);
+  scene.fog.color.setRGB(vc[0]/255*0.3,vc[1]/255*0.3,vc[2]/255*0.3);
+  renderer.setClearColor(new THREE.Color(vc[0]/6000,vc[1]/6000,vc[2]/6000),1);
 }
 
 rebuildForms(params,false);
 
 // ============================================================
-// MORPHING — store positions and lerp toward new targets
+// MORPHING
 // ============================================================
 function startMorph(newP){
-  // capture current positions/scales
   prevPositions=forms.map(f=>f.position.clone());
   prevScales=forms.map(f=>f.scale.x);
-  // build target positions from new params without rebuilding scene yet
   const rng=seededRNG(newP.hash);
   const count=forms.length;
   targetPositions=[];
   targetScales=[];
   for(let i=0;i<count;i++){
     const r=seededRNG(newP.hash+i*9999);
-    const spread=Math.max(0.3,1.8-density*0.9);
+    const spread=Math.max(0.8,2.5-density*0.6);
     targetPositions.push(new THREE.Vector3(
-      (r()-0.5)*spread*2.5,(r()-0.5)*spread*2,(r()-0.5)*spread*1.8
+      (r()-0.5)*spread*2.2,(r()-0.5)*spread*1.8,(r()-0.5)*spread*1.5
     ));
-    targetScales.push(r()*0.85+0.45);
+    targetScales.push(r()*1.0+0.5);
   }
   morphing=true; morphT=0;
 }
 
 // ============================================================
-// BLOOM — multi-pass: blurred copy + radial center glow
+// BLOOM — darker, more suffocating
 // ============================================================
 const bloomCanvas=document.getElementById('bloomCanvas');
 const bctx=bloomCanvas.getContext('2d');
@@ -426,33 +491,41 @@ function drawBloom(){
   const W=bloomCanvas.width, H=bloomCanvas.height;
   bctx.clearRect(0,0,W,H);
 
-  // pass 1 — wide soft bloom (heavy blur)
   const offscreen=document.createElement('canvas');
   offscreen.width=W; offscreen.height=H;
   const octx=offscreen.getContext('2d');
   octx.drawImage(renderer.domElement,0,0,W,H);
 
-  // draw blurred copy at low opacity — wide halo
-  bctx.filter='blur(22px)';
-  bctx.globalAlpha=params.bloomIntens*(destructionMode?1.6:0.8);
+  // pass 1 — wide bloom
+  bctx.filter='blur(28px)';
+  bctx.globalAlpha=params.bloomIntens*(destructionMode?1.5:0.75);
   bctx.drawImage(offscreen,0,0);
 
-  // pass 2 — tighter bright core bloom
-  bctx.filter='blur(8px)';
-  bctx.globalAlpha=params.bloomIntens*1.4*(destructionMode?2:1);
+  // pass 2 — tighter glow
+  bctx.filter='blur(10px)';
+  bctx.globalAlpha=params.bloomIntens*1.2*(destructionMode?1.8:1);
   bctx.drawImage(offscreen,0,0);
 
-  // pass 3 — radial white glow at center — overexposed core
+  // pass 3 — white hot core glow
   bctx.filter='none';
-  const cx=W/2+Math.sin(frameT*0.012)*W*0.05;
-  const cy=H/2+Math.cos(frameT*0.009)*H*0.04;
-  const grd=bctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(W,H)*0.28);
-  const bi=params.bloomIntens*(destructionMode?2.5:1.2)*(1+density*0.5);
-  grd.addColorStop(0,`rgba(255,255,255,${Math.min(0.9,bi*0.7)})`);
-  grd.addColorStop(0.15,`rgba(255,255,255,${Math.min(0.5,bi*0.3)})`);
-  grd.addColorStop(0.4,`rgba(255,255,255,${Math.min(0.15,bi*0.08)})`);
-  grd.addColorStop(1,'rgba(255,255,255,0)');
+  const cx=W/2+Math.sin(frameT*0.004)*W*0.03;
+  const cy=H/2+Math.cos(frameT*0.003)*H*0.02;
+  const grd0=bctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(W,H)*0.15);
+  const bi=params.bloomIntens*(destructionMode?2.2:1.0)*(1+density*0.4);
+  grd0.addColorStop(0,`rgba(255,255,255,${Math.min(0.6,bi*0.5)})`);
+  grd0.addColorStop(0.3,`rgba(255,255,255,${Math.min(0.15,bi*0.12)})`);
+  grd0.addColorStop(1,'rgba(255,255,255,0)');
   bctx.globalAlpha=1;
+  bctx.fillStyle=grd0;
+  bctx.fillRect(0,0,W,H);
+
+  // pass 4 — wider colored glow
+  const grd=bctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(W,H)*0.35);
+  const gc=PALETTE[params.lightCol1[0]];
+  grd.addColorStop(0,`rgba(${Math.min(255,gc[0]*2)},${Math.min(255,gc[1]*2)},${Math.min(255,gc[2]*2)},${Math.min(0.5,bi*0.45)})`);
+  grd.addColorStop(0.25,`rgba(${gc[0]},${gc[1]},${gc[2]},${Math.min(0.2,bi*0.18)})`);
+  grd.addColorStop(0.6,`rgba(${Math.floor(gc[0]*0.4)},${Math.floor(gc[1]*0.4)},${Math.floor(gc[2]*0.4)},${Math.min(0.08,bi*0.05)})`);
+  grd.addColorStop(1,'rgba(0,0,0,0)');
   bctx.fillStyle=grd;
   bctx.fillRect(0,0,W,H);
 
@@ -461,7 +534,7 @@ function drawBloom(){
 }
 
 // ============================================================
-// TEAR CANVAS
+// TEAR CANVAS — sparser, more deliberate
 // ============================================================
 const tearCanvas=document.getElementById('tearCanvas');
 const tctx=tearCanvas.getContext('2d');
@@ -470,30 +543,65 @@ tearCanvas.width=window.innerWidth; tearCanvas.height=window.innerHeight;
 function drawTears(){
   const W=tearCanvas.width, H=tearCanvas.height;
   tctx.clearRect(0,0,W,H);
-  const strips=Math.floor(density*8+(submitFlash>0?18:0)+params.scanlines*0.5+(destructionMode?25:0));
+  const wEsc=1+wordBank.length*0.03; // slower escalation
+
+  // SPARSE horizontal interference — not constant noise
+  const shouldTear=Math.random()<(0.15+density*0.3+(submitFlash>0?0.8:0)+(destructionMode?0.9:0)+(violenceActive?0.6:0));
+  if(!shouldTear && !destructionMode) return; // NEGATIVE SPACE — often nothing
+
+  const strips=Math.floor((density*3+(submitFlash>0?8:0)+params.scanlines*0.3+(destructionMode?15:0)+(violenceActive?10:0))*wEsc);
   for(let i=0;i<strips;i++){
-    const rgb=randNeon();
-    tctx.globalAlpha=Math.random()*(destructionMode?0.18:0.055)+0.015;
+    const rgb=violenceActive||destructionMode?randAccent():randPalette();
+    tctx.globalAlpha=Math.random()*(destructionMode?0.12:0.035)+0.008;
     tctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    tctx.fillRect(0,Math.random()*H,W,Math.random()*3+1);
+    tctx.fillRect(0,Math.random()*H,W,Math.random()*2+1);
   }
   tctx.globalAlpha=1;
-  const tears=params.tearCount+Math.floor(density*4)+(submitFlash>0?3:0)+(destructionMode?18:0);
+
+  // black tears — like signal dropout
+  const tears=params.tearCount+Math.floor(density*2)+(submitFlash>0?2:0)+(destructionMode?12:0);
   for(let i=0;i<tears;i++){
-    tctx.globalAlpha=0.45+Math.random()*0.3;
+    tctx.globalAlpha=0.5+Math.random()*0.3;
     tctx.fillStyle='#000';
-    tctx.fillRect(0,Math.random()*H,W,Math.random()*(destructionMode?18:5)+1);
+    tctx.fillRect(0,Math.random()*H,W,Math.random()*(destructionMode?14:3)+1);
   }
   tctx.globalAlpha=1;
-  if(submitFlash>14||destructionMode){
-    const n=destructionMode?30:16;
+
+  // VIOLENCE FLASH — rare, bright, brutal, then gone
+  if(violenceActive||destructionMode){
+    const n=destructionMode?20:8;
     for(let i=0;i<n;i++){
-      const rgb=randNeon();
-      tctx.globalAlpha=Math.random()*(destructionMode?0.85:0.5);
+      const rgb=randAccent();
+      tctx.globalAlpha=Math.random()*(destructionMode?0.6:0.35);
       tctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-      tctx.fillRect(0,Math.random()*H,W,Math.random()*(destructionMode?55:32)+3);
+      tctx.fillRect(0,Math.random()*H,W,Math.random()*(destructionMode?40:20)+2);
     }
     tctx.globalAlpha=1;
+  }
+}
+
+// ============================================================
+// VIOLENCE SYSTEM — casual brutality
+// Occasional moments where the piece snaps: vertices spike violently,
+// camera lurches, bright accent flash — then returns to slow crawl
+// as if nothing happened
+// ============================================================
+function tickViolence(){
+  violenceCooldown--;
+  if(violenceCooldown<=0 && !violenceActive && !destructionMode){
+    // chance increases with word count
+    if(Math.random()<(0.002+wordBank.length*0.0003)){
+      violenceActive=true;
+      violenceTimer=Math.floor(Math.random()*15+5); // very brief — 5-20 frames
+      violenceCooldown=Math.floor(Math.random()*200+150); // then long cooldown
+    }
+  }
+  if(violenceActive){
+    violenceTimer--;
+    if(violenceTimer<=0){
+      violenceActive=false;
+      violenceCooldown=Math.floor(Math.random()*200+150);
+    }
   }
 }
 
@@ -502,19 +610,36 @@ function drawTears(){
 // ============================================================
 function animateForms(){
   const t=frameT;
+  tickViolence();
 
-  // BREATHING CAMERA
-  const breatheX=Math.sin(t*0.007)*0.18+Math.sin(t*0.013)*0.08;
-  const breatheY=Math.cos(t*0.009)*0.12+Math.cos(t*0.017)*0.05;
-  const breatheZ=5.5+Math.sin(t*0.005)*0.25;
+  // BREATHING CAMERA — labored, slow, claustrophobic
+  const esc=escalation();
+  const breathPhase=laboredBreath((t*0.0015)%1); // very slow breath cycle
+  const breathScale=Math.min(esc*0.2, 1.2);
+
+  let breatheX=Math.sin(t*0.003)*0.08*breathScale;
+  let breatheY=Math.cos(t*0.004)*0.06*breathScale;
+  let breatheZ=5.2+breathPhase*0.15*breathScale; // camera pushes in on inhale
+
+  // occasional slow, uncomfortable drift closer — like something leaning in
+  const driftPhase=Math.sin(t*0.0008)*0.5+0.5; // 0-1 over very long period
+  breatheZ-=driftPhase*0.4*(1+density*0.5);
+
+  // VIOLENCE — sudden camera jolt
+  if(violenceActive){
+    breatheX+=(Math.random()-0.5)*0.3;
+    breatheY+=(Math.random()-0.5)*0.2;
+    breatheZ-=0.3; // snap closer
+  }
+
   camera.position.set(breatheX,breatheY,breatheZ);
   camera.lookAt(0,0,0);
 
-  // MORPHING — lerp positions/scales
+  // MORPHING
   if(morphing){
     morphT++;
-    const ease=morphT/morphDuration;
-    const s=ease<0.5?2*ease*ease:1-Math.pow(-2*ease+2,2)/2; // ease in-out
+    const raw=morphT/morphDuration;
+    const s=uncannyEase(raw); // uncanny easing — slow then snap
     for(let i=0;i<Math.min(forms.length,prevPositions.length);i++){
       forms[i].position.lerpVectors(prevPositions[i],targetPositions[i],s);
       const sc=prevScales[i]+(targetScales[i]-prevScales[i])*s;
@@ -522,7 +647,6 @@ function animateForms(){
     }
     if(morphT>=morphDuration){
       morphing=false;
-      // now actually rebuild with new geometry
       rebuildForms(params,false);
     }
   }
@@ -531,79 +655,154 @@ function animateForms(){
     const f=forms[i]; const ud=f.userData;
 
     if(destructionMode){
-      // VERTEX TEARING — rebuild geo with extreme displacement each frame
-      if(Math.random()<0.08){
+      // vertex tearing — but SLOWER, heavier
+      if(Math.random()<0.04){ // less frequent rebuilds
         const newGeo=buildGeo(
           Math.floor(Math.random()*5),
           Math.floor(Math.random()*6+3),
-          params.noiseFreq*(Math.random()*5+1),
-          params.noiseAmp*(Math.random()*5+1),
-          Math.random(), params.hash+i+frameT, Math.random()*6+1
+          params.noiseFreq*(Math.random()*4+1),
+          params.noiseAmp*(Math.random()*4+1),
+          Math.random(), params.hash+i+frameT, Math.random()*5+1
         );
         f.geometry.dispose();
         f.geometry=newGeo;
       }
-      // SPAZ movement
-      f.position.x+=ud.spazVx*(1.5+Math.sin(t*0.3+i)*1.5);
-      f.position.y+=ud.spazVy*(1.5+Math.cos(t*0.25+i)*1.5);
-      f.position.z+=ud.spazVz;
-      if(Math.abs(f.position.x)>5){ud.spazVx*=-1;}
-      if(Math.abs(f.position.y)>5){ud.spazVy*=-1;}
+      // slower spaz — deliberate, heavy
+      f.position.x+=ud.spazVx*(0.8+Math.sin(t*0.15+i)*0.8);
+      f.position.y+=ud.spazVy*(0.8+Math.cos(t*0.12+i)*0.8);
+      f.position.z+=ud.spazVz*0.5;
+      if(Math.abs(f.position.x)>4){ud.spazVx*=-1;}
+      if(Math.abs(f.position.y)>4){ud.spazVy*=-1;}
       if(Math.abs(f.position.z)>3){ud.spazVz*=-1;}
-      if(Math.random()<0.04){
-        f.position.x+=(Math.random()-0.5)*1.8;
-        f.position.y+=(Math.random()-0.5)*1.8;
+      if(Math.random()<0.02){
+        f.position.x+=(Math.random()-0.5)*1.2;
+        f.position.y+=(Math.random()-0.5)*1.2;
       }
-      // CLONING effect — random scale pulses
-      f.scale.setScalar(ud.baseScale*(0.3+Math.random()*2.5));
-      f.rotateOnAxis(ud.rotAxis,ud.rotSpeed*4);
+      f.scale.setScalar(ud.baseScale*(0.4+Math.random()*1.8));
+      f.rotateOnAxis(ud.rotAxis,ud.rotSpeed*2);
       if(f.material.uniforms){
-        f.material.uniforms.uEmitInt.value=Math.random()*5+0.5;
-        f.material.uniforms.uTime.value=t*0.08+Math.random()*3;
-        f.material.uniforms.uScanFreq.value=10+Math.random()*300;
+        f.material.uniforms.uEmitInt.value=Math.random()*3+0.3;
+        f.material.uniforms.uTime.value=t*0.04+Math.random()*2;
+        f.material.uniforms.uScanFreq.value=10+Math.random()*200;
+        f.material.uniforms.uDread.value=0.6+Math.random()*0.4;
       }
     } else {
       if(!morphing){
-        f.rotateOnAxis(ud.rotAxis,ud.rotSpeed*(1+density*2));
-        ud.phase+=ud.wobble*(1+density*1.5);
-        const pulse=1+Math.sin(ud.phase)*0.07*(1+density);
-        f.scale.setScalar(ud.baseScale*pulse);
-        if(density>0.3&&Math.random()<density*0.07){
-          f.position.x+=(Math.random()-0.5)*density*0.1;
-          f.position.y+=(Math.random()-0.5)*density*0.1;
+        const esc=escalation();
+
+        // UNCANNY STILLNESS — forms pause, then lurch
+        ud.lurchCooldown--;
+        if(!ud.isStill && ud.lurchCooldown<=0 && Math.random()<0.01){
+          ud.isStill=true;
+          ud.stillDuration=Math.floor(Math.random()*120+40); // hold still 40-160 frames
+          ud.stillTimer=0;
+        }
+        if(ud.isStill){
+          ud.stillTimer++;
+          if(ud.stillTimer>=ud.stillDuration){
+            ud.isStill=false;
+            ud.lurchCooldown=Math.floor(Math.random()*300+100);
+            // LURCH — sudden position shift when unfreezing
+            f.position.x+=(Math.random()-0.5)*0.15*esc;
+            f.position.y+=(Math.random()-0.5)*0.12*esc;
+          }
+          // during stillness — only the faintest drift
+          f.position.x+=(Math.random()-0.5)*0.0003;
+          f.position.y+=(Math.random()-0.5)*0.0003;
+        } else {
+          // normal slow rotation
+          f.rotateOnAxis(ud.rotAxis,ud.rotSpeed*(1+density)*esc*0.3);
+          ud.phase+=ud.wobble*(1+density*0.8);
+          const pulse=1+Math.sin(ud.phase)*0.04*(1+density*0.5);
+          f.scale.setScalar(ud.baseScale*pulse);
+          // minimal jitter
+          const jit=jitterAmt();
+          f.position.x+=(Math.random()-0.5)*jit;
+          f.position.y+=(Math.random()-0.5)*jit;
+          f.position.z+=(Math.random()-0.5)*jit*0.3;
+        }
+
+        // VIOLENCE — sudden vertex spikes, then nothing
+        if(violenceActive){
+          const pos=f.geometry.attributes.position;
+          const spikeCount=Math.floor(Math.random()*8+3)*Math.ceil(esc);
+          for(let s=0;s<spikeCount;s++){
+            const vi=Math.floor(Math.random()*pos.count);
+            const x=pos.getX(vi),y=pos.getY(vi),z=pos.getZ(vi);
+            const len=Math.sqrt(x*x+y*y+z*z)||1;
+            const spikeMag=(0.5+Math.random()*2.0)*esc;
+            pos.setXYZ(vi, x/len*(len+spikeMag), y/len*(len+spikeMag), z/len*(len+spikeMag));
+          }
+          pos.needsUpdate=true;
+          f.geometry.computeVertexNormals();
+        } else {
+          // ambient spike eruptions — rarer
+          const spikeP=spikeProbability();
+          if(Math.random()<spikeP*f.geometry.attributes.position.count){
+            const pos=f.geometry.attributes.position;
+            const spikeCount=Math.floor(Math.random()*3+1)*Math.ceil(esc*0.4);
+            for(let s=0;s<spikeCount;s++){
+              const vi=Math.floor(Math.random()*pos.count);
+              const x=pos.getX(vi),y=pos.getY(vi),z=pos.getZ(vi);
+              const len=Math.sqrt(x*x+y*y+z*z)||1;
+              const spikeMag=(0.2+Math.random()*0.8)*esc;
+              pos.setXYZ(vi, x/len*(len+spikeMag), y/len*(len+spikeMag), z/len*(len+spikeMag));
+            }
+            pos.needsUpdate=true;
+            f.geometry.computeVertexNormals();
+          }
+          // vertex reset — rebuild occasionally
+          if(Math.random()<0.01+density*0.01){
+            const newGeo=buildGeo(ud.baseType||0,ud.segments||10,
+              params.noiseFreq,params.noiseAmp,ud.sp||params.spikiness,params.hash+f.id,1);
+            f.geometry.dispose();
+            f.geometry=newGeo;
+          }
         }
       }
       if(f.material.uniforms){
-        const flicker=Math.random()<0.04+density*0.08?0.55+Math.random()*0.45:1;
-        f.material.uniforms.uEmitInt.value=(0.7+density*0.9)*flicker;
-        f.material.uniforms.uTime.value=t*0.018;
+        const esc=escalation();
+        // flicker — rarer but deeper when it happens
+        const flickerChance=0.02+density*0.04+wordBank.length*0.001;
+        const flicker=Math.random()<flickerChance?0.1+Math.random()*0.4:1; // drops MUCH darker
+        f.material.uniforms.uEmitInt.value=(0.6+density*0.7)*flicker*Math.min(esc*0.5,3.0);
+        f.material.uniforms.uTime.value=t*0.008*Math.min(esc*0.3,2.5); // slower scanline crawl
+        f.material.uniforms.uDread.value=violenceActive?0.5+Math.random()*0.5:Math.sin(t*0.002)*0.1;
+        if(Math.random()<0.01) f.material.uniforms.uScanFreq.value=
+          40+params.spikiness*80+wordBank.length+Math.random()*wordBank.length*1.5;
       }
     }
   }
 
-  // orbit lights
+  // orbit lights — slower, more deliberate
   if(activeLights.length>0){
-    const lt=t*0.01;
-    activeLights[0].position.x=Math.sin(lt)*1.8*(destructionMode?2.5:1);
-    activeLights[0].position.y=Math.cos(lt*0.7)*1.2*(destructionMode?2.5:1);
-    activeLights[0].intensity=params.lightIntens*(1+density*1.5)*(destructionMode?3.5:1)*(0.85+Math.sin(t*0.06)*0.15);
+    const lt=t*0.004; // half speed light orbit
+    activeLights[0].position.x=Math.sin(lt)*1.5*(destructionMode?2:1);
+    activeLights[0].position.y=Math.cos(lt*0.5)*0.9*(destructionMode?2:1);
+    activeLights[0].intensity=params.lightIntens*(1+density*0.8)*(destructionMode?2.5:1)*(0.85+Math.sin(t*0.02)*0.15);
+    // violence brightens the key light briefly
+    if(violenceActive) activeLights[0].intensity*=2.5;
+
     if(activeLights[1]){
-      activeLights[1].position.x=Math.cos(lt*1.3)*1.4;
-      activeLights[1].position.y=Math.sin(lt*0.9)*1.0;
+      activeLights[1].position.x=Math.cos(lt*0.8)*1.2;
+      activeLights[1].position.y=Math.sin(lt*0.5)*0.8;
     }
-    // core flicker — drives bloom
     if(activeLights[2]){
-      activeLights[2].intensity=params.lightIntens*1.8*(destructionMode?3:1)*(0.75+Math.random()*0.5+density*0.3);
-      activeLights[2].position.x=Math.sin(lt*2.1)*0.4;
-      activeLights[2].position.y=Math.cos(lt*1.7)*0.3;
+      // core flicker — subtle pulse, not spastic
+      const corePulse=0.7+laboredBreath((t*0.001)%1)*0.3;
+      activeLights[2].intensity=params.lightIntens*0.8*(destructionMode?2:1)*corePulse*(1+density*0.2);
+      activeLights[2].position.x=Math.sin(lt*1.2)*0.2;
+      activeLights[2].position.y=Math.cos(lt*0.9)*0.15;
+      if(violenceActive) activeLights[2].intensity*=3;
     }
     if(activeLights[3]){
-      activeLights[3].intensity=params.lightIntens*0.9*(destructionMode?2:1)*(0.6+Math.random()*0.8);
+      activeLights[3].intensity=params.lightIntens*0.3*(destructionMode?1.5:1)*(0.7+Math.random()*0.3);
     }
   }
 
-  formGroup.rotation.y+=params.rotSpeed*(1+density*1.5)*(destructionMode?3:1);
-  formGroup.rotation.x+=params.rotSpeed*0.28*(destructionMode?2:1);
+  // group rotation — MUCH slower
+  formGroup.rotation.y+=params.rotSpeed*(1+density*0.8)*(destructionMode?2:1)*0.5;
+  formGroup.rotation.x+=params.rotSpeed*0.15*(destructionMode?1.5:1);
 
   if(destructionMode){
     destructionTimer--;
@@ -612,24 +811,24 @@ function animateForms(){
 }
 
 // ============================================================
-// DESTRUCTION
+// DESTRUCTION — slower, heavier
 // ============================================================
 function triggerDestruction(){
-  destructionMode=true; destructionTimer=200;
+  destructionMode=true; destructionTimer=280; // longer destruction
   submissionsSinceDestruction=0;
   morphing=false;
-  // white flash
+  // dark red flash instead of white
   const wf=document.getElementById('whiteFlash');
-  wf.style.opacity='0.9';
-  setTimeout(()=>wf.style.opacity='0',80);
+  wf.style.opacity='0.6';
+  setTimeout(()=>wf.style.opacity='0',150); // slower fade
   rebuildForms(params,true);
 }
 
 function endDestruction(){
   destructionMode=false; destructionTimer=0;
   const wf=document.getElementById('whiteFlash');
-  wf.style.opacity='0.7';
-  setTimeout(()=>wf.style.opacity='0',60);
+  wf.style.opacity='0.4';
+  setTimeout(()=>wf.style.opacity='0',120);
   rebuildForms(params,false);
 }
 
@@ -653,30 +852,28 @@ const RAND_WORDS=['void','static','break','lapse','decay','ghost','hollow','surg
 
 function addWord(word){
   wordBank.push(word);
-  density=Math.min(1,density+0.022);
+  density=Math.min(1,density+0.018); // slower density buildup
   const newParams=seedParams(word);
-  newParams.shiftAmt=newParams.shiftAmt*(1+density*1.4);
+  newParams.shiftAmt=newParams.shiftAmt*(1+density*1.2);
   submissionsSinceDestruction++;
-  submitFlash=26;
+  submitFlash=20;
 
   if(!destructionMode){
     if(submissionsSinceDestruction>=DESTRUCTION_INTERVAL&&Math.random()<0.7){
       params=newParams;
       triggerDestruction();
     } else {
-      // start morph to new state
       startMorph(newParams);
       params=newParams;
-      // update lights + fog immediately
       buildLights(params,false);
       const vc=params.voidColor;
-      scene.fog.color.setRGB(vc[0]/255*0.5,vc[1]/255*0.5,vc[2]/255*0.5);
-      renderer.setClearColor(new THREE.Color(vc[0]/4096,vc[1]/4096,vc[2]/4096),1);
+      scene.fog.color.setRGB(vc[0]/255*0.3,vc[1]/255*0.3,vc[2]/255*0.3);
+      renderer.setClearColor(new THREE.Color(vc[0]/6000,vc[1]/6000,vc[2]/6000),1);
     }
   } else {
     params=newParams;
     rebuildForms(params,true);
-    destructionTimer=Math.max(destructionTimer,140);
+    destructionTimer=Math.max(destructionTimer,180);
   }
 
   persist();
@@ -691,7 +888,7 @@ function updateUI(lastWord){
     const fb=document.getElementById('feedback');
     fb.textContent='"'+lastWord+'"';
     fb.classList.add('show');
-    setTimeout(()=>fb.classList.remove('show'),900);
+    setTimeout(()=>fb.classList.remove('show'),1200); // lingers longer
   }
 }
 
