@@ -168,8 +168,8 @@ function seedParams(word){
   const voidR=voidHue<0.33?Math.floor(rng()*12+2):Math.floor(rng()*4);
   const voidG=voidHue>0.33&&voidHue<0.66?Math.floor(rng()*8+1):Math.floor(rng()*3);
   const voidB=voidHue>0.66?Math.floor(rng()*15+3):Math.floor(rng()*6+2);
-  // texture chance — seeded so same word always makes same choice
-  const useTex=rng()<0.35;
+  // texture chance — mostly textures
+  const useTex=rng()<0.80;
   const texIdx=Math.floor(rng()*TEXTURE_COUNT);
   const texBlend=rng()*0.55+0.3;
   return{
@@ -383,13 +383,13 @@ function spawnForm(p,idx,isDestruction){
   const colIdx=p.lightCol1[idx%2];
   const col2Idx=(colIdx+Math.floor(rng()*7)+1)%PALETTE.length;
   const col=PALETTE[colIdx],col2=PALETTE[col2Idx];
-  const wireframe=isDestruction?rng()<0.35:sp>0.8&&rng()<0.3;
+  const wireframe=isDestruction?rng()<0.25:sp>0.85&&rng()<0.2;
 
   // TEXTURE DECISION — seeded from word, ~1 in 3 forms gets artwork texture
   let mat;
-  const shouldTex = !wireframe && (isDestruction ? rng()<0.4 : p.useTex && rng()<0.6);
+  const shouldTex = !wireframe && (isDestruction ? rng()<0.7 : p.useTex && rng()<0.92);
   if(shouldTex && texPool.length>0){
-    const t=texPool[p.texIdx%texPool.length];
+    const t=texPool[(p.texIdx+idx*37)%texPool.length];
     mat=makeTexMat(t,col,isDestruction?rng():sp,
       isDestruction?0.45+rng()*0.45:0.75+rng()*0.25,
       p.texBlend);
