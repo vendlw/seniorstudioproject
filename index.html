@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>channel_01</title>
+<title>QR-Based Randomized Imagery</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body { width:100%; height:100%; background:#000; overflow:hidden; font-family:"Courier New",Courier,monospace; }
@@ -31,17 +31,17 @@
   .prompt { color:#fff; font-size:13px; white-space:nowrap; }
   input[type=text] {
     flex:1; background:transparent; border:none;
-    border-bottom:1px solid rgba(255,255,255,0.5);
+    border-bottom:1px solid rgba(255,255,255,1);
     outline:none; color:#fff; font-family:"Courier New",monospace;
     font-size:14px; padding:3px 4px; caret-color:#fff;
   }
-  input::placeholder { color:rgba(255,255,255,0.25); }
+  input::placeholder { color:rgba(255,255,255,0.8); }
   button#submitBtn {
-    background:transparent; border:1px solid rgba(255,255,255,0.5); color:#fff;
+    background:transparent; border:1px solid rgba(255,255,255,1); color:#fff;
     font-family:"Courier New",monospace; font-size:13px; padding:3px 10px; cursor:pointer;
   }
   button#submitBtn:active { background:#fff; color:#000; }
-  .meta { display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,0.3); }
+  .meta { display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,1); }
   .meta .lw { color:rgba(255,255,255,0.65); }
   #dev {
     position:fixed; top:0; left:0; z-index:20; padding:6px 8px; display:flex; gap:6px;
@@ -49,7 +49,7 @@
   }
   #dev:hover { opacity:1; }
   #dev button {
-    background:transparent; border:1px solid rgba(255,255,255,0.4); color:#fff;
+    background:transparent; border:1px solid rgba(255,255,255,1); color:#fff;
     font-family:"Courier New",monospace; font-size:9px; padding:2px 6px; cursor:pointer;
   }
   #dev button:active { background:#fff; color:#000; }
@@ -86,7 +86,7 @@
     <button id="submitBtn">ok</button>
   </div>
   <div class="meta">
-    <span>ch_01 · words: <span id="wordCount">0</span> · density: <span id="densityPct">0%</span></span>
+    <span>QR-Based Randomized Imagery · words: <span id="wordCount">0</span> · density: <span id="densityPct">0%</span></span>
     <span id="latestWord" class="lw">&nbsp;</span>
   </div>
 </div>
