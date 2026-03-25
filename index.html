@@ -92,7 +92,16 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+// ============================================================
+// SUPABASE
+// ============================================================
+const SUPABASE_URL='https://hddwiukdwjduvfzuxaiy.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhkZHdpdWtkd2pkdXZmenV4YWl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjA2NzksImV4cCI6MjA4OTk5NjY3OX0.00rRAKAAWHvDjPOfjU3uM2pN2IYHxm2HbU3iYtKUwcE';
+const supa=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const localSubmits=new Set();
+
 // ============================================================
 // PALETTE
 // ============================================================
@@ -191,9 +200,9 @@ function seedParams(word){
   };
 }
 
-let wordBank=JSON.parse(localStorage.getItem('wb_ch01')||'[]');
-let density=parseFloat(localStorage.getItem('dn_ch01')||'0');
-let params=seedParams(wordBank.length>0?wordBank[wordBank.length-1]:'init');
+let wordBank=[];
+let density=0;
+let params=seedParams('init');
 let submitFlash=0, frameT=0;
 let destructionMode=false, destructionTimer=0;
 let submissionsSinceDestruction=0;
@@ -204,10 +213,7 @@ function jitterAmt(){ return 0.002+wordBank.length*0.0004; }
 function spikeProbability(){ return 0.0001+wordBank.length*0.00004; }
 let morphing=false, morphT=0, morphDuration=90;
 let prevPositions=[], targetPositions=[], prevScales=[], targetScales=[];
-function persist(){
-  localStorage.setItem('wb_ch01',JSON.stringify(wordBank));
-  localStorage.setItem('dn_ch01',String(density));
-}
+function persist(){}
 
 // ============================================================
 // THREE.JS
@@ -730,16 +736,66 @@ function updateUI(lastWord){
     setTimeout(()=>fb.classList.remove('show'),1200);
   }
 }
-document.getElementById('submitBtn').addEventListener('click',()=>{
+document.getElementById('submitBtn').addEventListener('click',async()=>{
   const inp=document.getElementById('wordInput');
   const w=inp.value.trim().toLowerCase();
-  if(!w)return;inp.value='';addWord(w);
+  if(!w)return;inp.value='';
+  localSubmits.add(w+'_'+Date.now());
+  addWord(w);
+  await supa.from('words').insert({word:w});
 });
 document.getElementById('wordInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('submitBtn').click();});
-document.getElementById('resetBtn').addEventListener('click',()=>{if(!confirm('reset?'))return;localStorage.removeItem('wb_ch01');localStorage.removeItem('dn_ch01');location.reload();});
-document.getElementById('addTenBtn').addEventListener('click',()=>{for(let i=0;i<10;i++)addWord(RAND_WORDS[Math.floor(Math.random()*RAND_WORDS.length)]);});
+document.getElementById('resetBtn').addEventListener('click',async()=>{
+  if(!confirm('reset all words for ALL devices?'))return;
+  await supa.from('words').delete().neq('id',0);
+  location.reload();
+});
+document.getElementById('addTenBtn').addEventListener('click',async()=>{
+  const batch=[];
+  for(let i=0;i<10;i++){
+    const w=RAND_WORDS[Math.floor(Math.random()*RAND_WORDS.length)];
+    localSubmits.add(w+'_batch'+i+Date.now());
+    addWord(w);
+    batch.push({word:w});
+  }
+  await supa.from('words').insert(batch);
+});
 document.getElementById('destroyBtn').addEventListener('click',triggerDestruction);
 updateUI(null);loop();
+
+// ============================================================
+// SUPABASE: LOAD EXISTING WORDS + REALTIME
+// ============================================================
+(async function initSupabase(){
+  // Load all existing words
+  const{data,error}=await supa.from('words').select('word').order('id',{ascending:true});
+  if(data&&data.length>0){
+    for(const row of data){
+      wordBank.push(row.word);
+      density=Math.min(1,density+0.018);
+    }
+    params=seedParams(wordBank[wordBank.length-1]);
+    rebuildForms(params,false);
+    updateUI(wordBank[wordBank.length-1]);
+  }
+
+  // Subscribe to new words from other devices
+  supa.channel('words-realtime')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'words'},payload=>{
+      const w=payload.new.word;
+      // Skip if we just submitted this word locally
+      let wasLocal=false;
+      for(const key of localSubmits){
+        if(key.startsWith(w+'_')){localSubmits.delete(key);wasLocal=true;break;}
+      }
+      if(!wasLocal) addWord(w);
+    })
+    .on('postgres_changes',{event:'DELETE',schema:'public',table:'words'},()=>{
+      // Someone hit reset — reload
+      location.reload();
+    })
+    .subscribe();
+})();
 </script>
 </body>
 </html>
