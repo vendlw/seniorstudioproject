@@ -43,16 +43,6 @@
   button#submitBtn:active { background:#fff; color:#000; }
   .meta { display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,1); }
   .meta .lw { color:rgba(255,255,255,0.65); }
-  #dev {
-    position:fixed; top:0; left:0; z-index:20; padding:6px 8px; display:flex; gap:6px;
-    opacity:0.12; transition:opacity 0.2s;
-  }
-  #dev:hover { opacity:1; }
-  #dev button {
-    background:transparent; border:1px solid rgba(255,255,255,1); color:#fff;
-    font-family:"Courier New",monospace; font-size:9px; padding:2px 6px; cursor:pointer;
-  }
-  #dev button:active { background:#fff; color:#000; }
   #feedback {
     position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
     color:#fff; font-size:13px; font-family:"Courier New",monospace;
@@ -74,11 +64,6 @@
 <div id="vignette"></div>
 <div id="whiteFlash"></div>
 <div id="feedback"></div>
-<div id="dev">
-  <button id="resetBtn">reset</button>
-  <button id="addTenBtn">+10</button>
-  <button id="destroyBtn">destroy</button>
-</div>
 <div id="ui">
   <div class="input-row">
     <span class="prompt">&gt;</span>
@@ -745,22 +730,6 @@ document.getElementById('submitBtn').addEventListener('click',async()=>{
   await supa.from('words').insert({word:w});
 });
 document.getElementById('wordInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('submitBtn').click();});
-document.getElementById('resetBtn').addEventListener('click',async()=>{
-  if(!confirm('reset all words for ALL devices?'))return;
-  await supa.from('words').delete().neq('id',0);
-  location.reload();
-});
-document.getElementById('addTenBtn').addEventListener('click',async()=>{
-  const batch=[];
-  for(let i=0;i<10;i++){
-    const w=RAND_WORDS[Math.floor(Math.random()*RAND_WORDS.length)];
-    localSubmits.add(w+'_batch'+i+Date.now());
-    addWord(w);
-    batch.push({word:w});
-  }
-  await supa.from('words').insert(batch);
-});
-document.getElementById('destroyBtn').addEventListener('click',triggerDestruction);
 updateUI(null);loop();
 
 // ============================================================
